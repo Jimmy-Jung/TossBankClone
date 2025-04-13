@@ -27,8 +27,8 @@ let project = Project(
                     ]
                 ]
             ),
-            sources: ["Sources/**"],
-            resources: ["Resources/**"],
+            sources: ["TossBankClone/Sources/**"],
+            resources: ["TossBankClone/Resources/**"],
             dependencies: [
                 .target(name: "TossBankKit"),
                 .target(name: "DesignSystem"),
