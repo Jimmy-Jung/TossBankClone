@@ -18,14 +18,7 @@ public class AccountRepository: AccountRepositoryProtocol {
     private let modelContext: ModelContext
     
     public init() throws {
-        let schema = Schema([
-            Account.self,
-            Transaction.self,
-            TransactionMetadata.self
-        ])
-        
-        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
-        self.modelContainer = try ModelContainer(for: schema, configurations: [modelConfiguration])
+        self.modelContainer = try SchemaManager.createModelContainer()
         self.modelContext = ModelContext(modelContainer)
     }
     
@@ -160,6 +153,10 @@ public class AccountRepository: AccountRepositoryProtocol {
                 continuation.resume(throwing: error)
             }
         }
+    }
+    
+    public func generateMockData() {
+        MockDataGenerator.generateMockData(in: modelContext)
     }
 }
 

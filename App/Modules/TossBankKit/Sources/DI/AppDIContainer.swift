@@ -31,7 +31,28 @@ public final class AppDIContainer: AppDIContainerProtocol {
             baseURL: URL(string: "https://api.example.com")!,
             headers: ["Content-Type": "application/json"]
         )
-        return NetworkService(session: .shared, decoder: JSONDecoder(), configuration: config)
+        
+        // 인터셉터(플러그인) 구성
+        var plugins: [NetworkPlugin] = [
+            ConnectivityInterceptor(),
+            AuthInterceptor { [weak self] in
+                return "sample-auth-token"
+            }
+        ]
+        
+        #if DEBUG
+        plugins.append(LoggingInterceptor(logLevel: .body))
+        #endif
+        
+        plugins.append(CacheInterceptor())
+        plugins.append(TimeoutInterceptor(timeout: 15.0))
+        
+        return NetworkService(
+            session: .shared,
+            decoder: JSONDecoder(),
+            configuration: config,
+            plugins: plugins
+        )
     }()
     
     // MARK: - Repositories
