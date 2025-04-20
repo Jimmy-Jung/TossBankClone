@@ -30,10 +30,15 @@ let project = Project(
             sources: ["TossBankClone/Sources/**"],
             resources: ["TossBankClone/Resources/**"],
             dependencies: [
-                .target(name: "TossBankKit"),
-                .target(name: "DesignSystem"),
+                .target(name: "DomainModule"),
+                .target(name: "DataModule"),
                 .target(name: "NetworkModule"),
-                .target(name: "AuthFeature")
+                .target(name: "AuthenticationModule"),
+                .target(name: "CoordinatorModule"),
+                .target(name: "DesignSystem"),
+                .target(name: "AuthFeature"),
+                .target(name: "AccountFeature"),
+                .target(name: "SettingsFeature")
             ]
         ),
         .target(
@@ -45,22 +50,79 @@ let project = Project(
             sources: ["Modules/Features/Auth/Sources/**"],
             resources: ["Modules/Features/Auth/Resources/**"],
             dependencies: [
-                .target(name: "TossBankKit"),
+                .target(name: "DomainModule"),
                 .target(name: "NetworkModule"),
-                .target(name: "DesignSystem")
+                .target(name: "DesignSystem"),
+                .target(name: "AuthenticationModule"),
+                .target(name: "CoordinatorModule")
             ]
         ),
         .target(
-            name: "TossBankKit",
+            name: "AccountFeature",
             destinations: .iOS,
             product: .framework,
-            bundleId: "io.tuist.TossBankClone.kit",
+            bundleId: "io.tuist.TossBankClone.accountfeature",
             infoPlist: .default,
-            sources: ["Modules/TossBankKit/Sources/**"],
+            sources: ["Modules/Features/Account/Sources/**"],
+            resources: ["Modules/Features/Account/Resources/**"],
             dependencies: [
+                .target(name: "DomainModule"),
                 .target(name: "NetworkModule"),
-                .target(name: "DesignSystem")
+                .target(name: "DesignSystem"),
+                .target(name: "CoordinatorModule")
             ]
+        ),
+        .target(
+            name: "SettingsFeature",
+            destinations: .iOS,
+            product: .framework,
+            bundleId: "io.tuist.TossBankClone.settingsfeature",
+            infoPlist: .default,
+            sources: ["Modules/Features/Settings/Sources/**"],
+            resources: ["Modules/Features/Settings/Resources/**"],
+            dependencies: [
+                .target(name: "DomainModule"),
+                .target(name: "DesignSystem"),
+                .target(name: "CoordinatorModule")
+            ]
+        ),
+        .target(
+            name: "DomainModule",
+            destinations: .iOS,
+            product: .framework,
+            bundleId: "io.tuist.TossBankClone.domain",
+            infoPlist: .default,
+            sources: ["Modules/DomainModule/Sources/**"]
+        ),
+        .target(
+            name: "DataModule",
+            destinations: .iOS,
+            product: .framework,
+            bundleId: "io.tuist.TossBankClone.data",
+            infoPlist: .default,
+            sources: ["Modules/DataModule/Sources/**"],
+            dependencies: [
+                .target(name: "DomainModule")
+            ]
+        ),
+        .target(
+            name: "AuthenticationModule",
+            destinations: .iOS,
+            product: .framework,
+            bundleId: "io.tuist.TossBankClone.authentication",
+            infoPlist: .default,
+            sources: ["Modules/AuthenticationModule/Sources/**"],
+            dependencies: [
+                .target(name: "DomainModule")
+            ]
+        ),
+        .target(
+            name: "CoordinatorModule",
+            destinations: .iOS,
+            product: .framework,
+            bundleId: "io.tuist.TossBankClone.coordinator",
+            infoPlist: .default,
+            sources: ["Modules/CoordinatorModule/Sources/**"]
         ),
         .target(
             name: "NetworkModule",
@@ -68,7 +130,19 @@ let project = Project(
             product: .framework,
             bundleId: "io.tuist.TossBankClone.network",
             infoPlist: .default,
-            sources: ["Modules/NetworkModule/Sources/**"]
+            sources: ["Modules/NetworkModule/Sources/**"],
+            dependencies: []
+        ),
+        .target(
+            name: "NetworkModuleTests",
+            destinations: .iOS,
+            product: .unitTests,
+            bundleId: "io.tuist.TossBankClone.network.tests",
+            infoPlist: .default,
+            sources: ["Modules/NetworkModule/Tests/**"],
+            dependencies: [
+                .target(name: "NetworkModule")
+            ]
         ),
         .target(
             name: "DesignSystem",
