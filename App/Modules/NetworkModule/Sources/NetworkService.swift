@@ -1,6 +1,15 @@
 import Foundation
 import Combine
 
+/// URLSession 프로토콜 - 테스트 용이성을 위한 추상화
+public protocol URLSessionProtocol {
+    func data(for request: URLRequest) async throws -> (Data, URLResponse)
+    func upload(for request: URLRequest, from bodyData: Data) async throws -> (Data, URLResponse)
+}
+
+/// URLSession을 URLSessionProtocol로 확장
+extension URLSession: URLSessionProtocol { }
+
 /// 네트워크 서비스 인터페이스
 public protocol NetworkServiceProtocol {
     /// Endpoint를 사용한 요청
@@ -12,7 +21,7 @@ public protocol NetworkServiceProtocol {
 public final class NetworkService: NetworkServiceProtocol {
     // MARK: - 속성
     private let baseURL: URL
-    private let session: URLSession
+    private let session: URLSessionProtocol
     private let decoder: JSONDecoder
     private let encoder: JSONEncoder
     private let plugins: [NetworkPlugin]
@@ -22,7 +31,7 @@ public final class NetworkService: NetworkServiceProtocol {
     /// 네트워크 서비스 초기화
     /// - Parameters:
     ///   - baseURL: 기본 URL
-    ///   - session: URLSession (기본값: .shared)
+    ///   - session: URLSessionProtocol (기본값: URLSession.shared)
     ///   - decoder: JSONDecoder (기본값: JSONDecoder())
     ///   - encoder: JSONEncoder (기본값: JSONEncoder())
     ///   - plugins: 플러그인 배열 (기본값: [])
@@ -31,7 +40,7 @@ public final class NetworkService: NetworkServiceProtocol {
     ///   - RetryPlugin: 네트워크 요청 재시도 플러그인 (기본값: RetryPlugin())
     public init(
         baseURL: URL,
-        session: URLSession = .shared,
+        session: URLSessionProtocol = URLSession.shared,
         decoder: JSONDecoder = JSONDecoder(),
         encoder: JSONEncoder = JSONEncoder(),
         plugins: [NetworkPlugin] = [],
@@ -69,7 +78,7 @@ public final class NetworkService: NetworkServiceProtocol {
     public convenience init(
         baseURL: URL,
         authTokenProvider: @escaping () -> String?,
-        session: URLSession = .shared,
+        session: URLSessionProtocol = URLSession.shared,
         decoder: JSONDecoder = JSONDecoder(),
         encoder: JSONEncoder = JSONEncoder(),
         plugins: [NetworkPlugin] = [],
