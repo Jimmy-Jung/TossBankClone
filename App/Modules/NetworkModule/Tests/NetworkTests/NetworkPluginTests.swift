@@ -70,7 +70,7 @@ class NetworkPluginTests: XCTestCase {
     func testLoggingPluginLogsRequestAndResponse() async throws {
         // Given
         let mockLogger = MockLogger()
-        let plugin = LoggingPlugin(logger: mockLogger)
+        let plugin = LoggingPlugin(logLevel: .body, logger: mockLogger)
         
         var request = URLRequest(url: URL(string: "https://example.com/test")!)
         request.httpMethod = "GET"
@@ -100,8 +100,8 @@ class NetworkPluginTests: XCTestCase {
     
     func testCachePluginStoresAndRetrievesData() async throws {
         // Given
-        let mockCache = MockNetworkCache()
-        let plugin = CachePlugin(cache: mockCache)
+        let urlCache = URLCache(memoryCapacity: 10 * 1024 * 1024, diskCapacity: 50 * 1024 * 1024, diskPath: nil)
+        let plugin = CachePlugin(cache: urlCache)
         
         let request = URLRequest(url: URL(string: "https://example.com/cached")!)
         let response = HTTPURLResponse(
@@ -118,9 +118,10 @@ class NetworkPluginTests: XCTestCase {
         
         // Then
         // 캐시에 데이터가 저장되었는지 확인
-        XCTAssertTrue(mockCache.didStoreData)
-        XCTAssertEqual(mockCache.lastStoredData, responseData)
-        XCTAssertEqual(mockCache.lastStoredRequest?.url, request.url)
+        let cachedResponse = urlCache.cachedResponse(for: request)
+        XCTAssertNotNil(cachedResponse)
+        XCTAssertEqual(cachedResponse?.data, responseData)
+        XCTAssertEqual((cachedResponse?.response as? HTTPURLResponse)?.statusCode, 200)
     }
     
     // MARK: - TimeoutPlugin 테스트
@@ -170,9 +171,10 @@ class NetworkPluginTests: XCTestCase {
 // MARK: - 목 객체
 private class MockNetworkReachability: NetworkReachability {
     var isConnected: Bool = true
+    var didChangeStatus: ((Bool) -> Void)?
 }
 
-private class MockLogger {
+private class MockLogger: Logger {
     var didLogRequest = false
     var didLogResponse = false
     var lastRequestURL: String?
@@ -186,21 +188,5 @@ private class MockLogger {
     func logResponse(_ response: HTTPURLResponse, data: Data) {
         didLogResponse = true
         lastStatusCode = response.statusCode
-    }
-}
-
-private class MockNetworkCache {
-    var didStoreData = false
-    var lastStoredRequest: URLRequest?
-    var lastStoredData: Data?
-    
-    func storeResponse(for request: URLRequest, data: Data) {
-        didStoreData = true
-        lastStoredRequest = request
-        lastStoredData = data
-    }
-    
-    func retrieveResponse(for request: URLRequest) -> Data? {
-        return lastStoredData
     }
 } 
