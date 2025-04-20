@@ -1,7 +1,7 @@
 import Foundation
 
 /// 네트워크 오류 정의
-public enum NetworkError: Error {
+public enum NetworkError: Error, Equatable {
     case invalidURL
     case invalidResponse
     case httpError(statusCode: Int, data: Data)
@@ -57,6 +57,35 @@ public enum NetworkError: Error {
             return "서버에서 데이터를 받지 못했습니다."
         case .unknownError(let error):
             return "알 수 없는 오류가 발생했습니다. 자세한 내용은 로그를 확인해주세요. 오류: \(error)"
+        }
+    }
+    
+    // MARK: - Equatable 구현
+    public static func == (lhs: NetworkError, rhs: NetworkError) -> Bool {
+        switch (lhs, rhs) {
+        case (.invalidURL, .invalidURL),
+             (.invalidResponse, .invalidResponse),
+             (.timeoutError, .timeoutError),
+             (.unauthorized, .unauthorized),
+             (.offline, .offline),
+             (.noData, .noData),
+             (.noInternetConnection, .noInternetConnection):
+            return true
+            
+        case (.httpError(let lhsCode, _), .httpError(let rhsCode, _)):
+            return lhsCode == rhsCode
+            
+        case (.serverError(let lhsCode, _), .serverError(let rhsCode, _)):
+            return lhsCode == rhsCode
+            
+        case (.decodingError, .decodingError),
+             (.connectionError, .connectionError),
+             (.unknownError, .unknownError):
+            // Error 프로토콜은 Equatable을 준수하지 않으므로 타입만 같으면 동일하다고 처리
+            return true
+            
+        default:
+            return false
         }
     }
 } 
