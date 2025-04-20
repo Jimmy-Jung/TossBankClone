@@ -93,20 +93,20 @@ public final class PINLoginViewModel: ObservableObject {
         
         currentState = .authenticating
         
-        authManager.authenticateWithBiometrics()
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] completion in
-                if case .failure(let error) = completion {
-                    self?.showError(message: "생체 인증에 실패했습니다: \(error.localizedDescription)")
-                }
-            } receiveValue: { [weak self] success in
-                if success {
-                    self?.handleAuthenticationSuccess()
-                } else {
-                    self?.showError(message: "생체 인증에 실패했습니다. PIN을 입력해주세요.")
-                }
-            }
-            .store(in: &cancellables)
+        // authManager.authenticateBiometric()
+        //     .receive(on: DispatchQueue.main)
+        //     .sink { [weak self] completion in
+        //         if case .failure(let error) = completion {
+        //             self?.showError(message: "생체 인증에 실패했습니다: \(error.localizedDescription)")
+        //         }
+        //     } receiveValue: { [weak self] success in
+        //         if success {
+        //             self?.handleAuthenticationSuccess()
+        //         } else {
+        //             self?.showError(message: "생체 인증에 실패했습니다. PIN을 입력해주세요.")
+        //         }
+        //     }
+        //     .store(in: &cancellables)
     }
     
     // MARK: - 비공개 메서드
@@ -114,30 +114,30 @@ public final class PINLoginViewModel: ObservableObject {
         currentState = .authenticating
         
         // 인증 지연 시뮬레이션
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
-            guard let self = self else { return }
-            
-            self.authManager.validatePIN(self.pin)
-                .receive(on: DispatchQueue.main)
-                .sink { completion in
-                    if case .failure(let error) = completion {
-                        self.showError(message: "인증 중 오류가 발생했습니다: \(error.localizedDescription)")
-                    }
-                } receiveValue: { success in
-                    if success {
-                        self.handleAuthenticationSuccess()
-                    } else {
-                        self.remainingAttempts -= 1
-                        
-                        if self.remainingAttempts <= 0 {
-                            self.handleAccountLocked()
-                        } else {
-                            self.showError(message: "잘못된 PIN 번호입니다.")
-                        }
-                    }
-                }
-                .store(in: &self.cancellables)
-        }
+        // DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+        //     guard let self = self else { return }
+        //     
+        //     self.authManager.validatePIN(self.pin)
+        //         .receive(on: DispatchQueue.main)
+        //         .sink { completion in
+        //             if case .failure(let error) = completion {
+        //                 self.showError(message: "인증 중 오류가 발생했습니다: \(error.localizedDescription)")
+        //             }
+        //         } receiveValue: { success in
+        //             if success {
+        //                 self.handleAuthenticationSuccess()
+        //             } else {
+        //                 self.remainingAttempts -= 1
+        //                 
+        //                 if self.remainingAttempts <= 0 {
+        //                     self.handleAccountLocked()
+        //                 } else {
+        //                     self.showError(message: "잘못된 PIN 번호입니다.")
+        //                 }
+        //             }
+        //         }
+        //         .store(in: &self.cancellables)
+        // }
     }
     
     private func handleAuthenticationSuccess() {

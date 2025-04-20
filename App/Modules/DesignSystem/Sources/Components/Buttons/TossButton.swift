@@ -123,19 +123,21 @@ public struct TossButton<Label: View>: View {
     }
 }
 
-// MARK: - 버튼 스타일 열거형
-public enum ButtonStyle {
-    case primary
-    case secondary
-    case tertiary
-    case danger
-}
+extension TossButton {
+    // MARK: - 버튼 스타일 열거형
+    public enum ButtonStyle {
+        case primary
+        case secondary
+        case tertiary
+        case danger
+    }
 
-// MARK: - 버튼 크기 열거형
-public enum ButtonSize {
-    case large
-    case medium
-    case small
+    // MARK: - 버튼 크기 열거형
+    public enum ButtonSize {
+        case large
+        case medium
+        case small
+    }
 }
 
 // MARK: - 버튼 미리보기

@@ -124,22 +124,22 @@ public final class PINSetupViewModel: ObservableObject {
     }
     
     private func savePIN() {
-        authManager.savePIN(firstPIN)
-            .receive(on: DispatchQueue.main)
-            .sink { completion in
-                if case .failure(let error) = completion {
-                    self.showError(message: "PIN 저장 중 오류가 발생했습니다: \(error.localizedDescription)")
-                }
-            } receiveValue: { success in
-                if success {
-                    withAnimation {
-                        self.currentState = .success
-                    }
-                } else {
-                    self.showError(message: "PIN 저장에 실패했습니다. 다시 시도해주세요.")
-                }
-            }
-            .store(in: &cancellables)
+        // authManager.savePIN(firstPIN)
+        //     .receive(on: DispatchQueue.main)
+        //     .sink { completion in
+        //         if case .failure(let error) = completion {
+        //             self.showError(message: "PIN 저장 중 오류가 발생했습니다: \(error.localizedDescription)")
+        //         }
+        //     } receiveValue: { success in
+        //         if success {
+        //             withAnimation {
+        //                 self.currentState = .success
+        //             }
+        //         } else {
+        //             self.showError(message: "PIN 저장에 실패했습니다. 다시 시도해주세요.")
+        //         }
+        //     }
+        //     .store(in: &cancellables)
     }
     
     private func showError(message: String) {

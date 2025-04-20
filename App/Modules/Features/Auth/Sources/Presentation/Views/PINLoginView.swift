@@ -21,8 +21,8 @@ public struct PINLoginView: View {
             } else {
                 PINIndicator(
                     pinLength: viewModel.pin.count,
-                    maxDigits: 6,
-                    isError: viewModel.isError
+                    isError: viewModel.isError,
+                    maxLength: 6
                 )
                 .padding(.bottom, 40)
                 
@@ -59,11 +59,11 @@ public struct PINLoginView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text(viewModel.headerTitle)
                 .font(.system(size: 24, weight: .bold))
-                .foregroundColor(.label)
+                .foregroundColor(ColorTokens.Text.primary)
             
             Text(viewModel.headerSubtitle)
                 .font(.system(size: 16))
-                .foregroundColor(.secondaryLabel)
+                .foregroundColor(ColorTokens.Text.secondary)
             
             if viewModel.isError {
                 Text(viewModel.errorMessage)
@@ -106,7 +106,7 @@ public struct PINLoginView: View {
             
             Text("잠시 후 메인 화면으로 이동합니다")
                 .font(.system(size: 16))
-                .foregroundColor(.secondaryLabel)
+                .foregroundColor(ColorTokens.Text.secondary)
                 .multilineTextAlignment(.center)
         }
     }
@@ -124,17 +124,14 @@ public struct PINLoginView: View {
             
             Text("너무 많은 로그인 시도로 계정이 잠겼습니다.\n고객센터에 문의해 주세요.")
                 .font(.system(size: 14))
-                .foregroundColor(.secondaryLabel)
+                .foregroundColor(ColorTokens.Text.secondary)
                 .multilineTextAlignment(.center)
             
-            TossButton(
-                title: "고객센터 연결하기",
-                style: .filled,
-                size: .large,
-                action: {
-                    // 고객센터 연결 로직
-                }
-            )
+            TossButton(style: .primary, size: .large) {
+                // 고객센터 연결 로직
+            } label: {
+                Text("고객센터 연결하기")
+            }
             .padding(.top, 16)
         }
         .padding(.horizontal, 20)

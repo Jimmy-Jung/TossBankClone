@@ -1,45 +1,31 @@
 import SwiftUI
 
+// MARK: - PIN 표시기
 public struct PINIndicator: View {
-    let pinLength: Int
-    let maxDigits: Int
-    let isError: Bool
+    // MARK: - 속성
+    private let pinLength: Int
+    private let isError: Bool
+    private let maxLength: Int
     
-    public init(pinLength: Int, maxDigits: Int = 6, isError: Bool = false) {
+    // MARK: - 생성자
+    public init(pinLength: Int, isError: Bool = false, maxLength: Int = 6) {
         self.pinLength = pinLength
-        self.maxDigits = maxDigits
         self.isError = isError
+        self.maxLength = maxLength
     }
     
+    // MARK: - 바디
     public var body: some View {
         HStack(spacing: 16) {
-            ForEach(0..<maxDigits, id: \.self) { index in
+            ForEach(0..<maxLength, id: \.self) { index in
                 Circle()
-                    .fill(getCircleColor(for: index))
+                    .fill(index < pinLength
+                          ? (isError ? ColorTokens.State.error : ColorTokens.Brand.primary)
+                          : ColorTokens.Background.secondary)
                     .frame(width: 16, height: 16)
-                    .overlay(
-                        Circle()
-                            .stroke(getStrokeColor(for: index), lineWidth: 1)
-                    )
+                    .animation(.spring(response: 0.2), value: pinLength)
+                    .animation(.spring(response: 0.2), value: isError)
             }
         }
-        .animation(.easeInOut(duration: 0.2), value: pinLength)
-        .animation(.easeInOut(duration: 0.2), value: isError)
     }
-    
-    private func getCircleColor(for index: Int) -> Color {
-        if isError {
-            return .red.opacity(0.15)
-        }
-        
-        return index < pinLength ? .accentColor : .clear
-    }
-    
-    private func getStrokeColor(for index: Int) -> Color {
-        if isError {
-            return .red
-        }
-        
-        return index < pinLength ? .accentColor : .gray.opacity(0.5)
-    }
-} 
+}

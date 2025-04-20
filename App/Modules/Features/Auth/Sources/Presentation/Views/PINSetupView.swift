@@ -22,8 +22,8 @@ public struct PINSetupView: View {
             } else {
                 PINIndicator(
                     pinLength: viewModel.currentPINLength,
-                    maxDigits: 6,
-                    isError: viewModel.isError
+                    isError: viewModel.isError,
+                    maxLength: 6
                 )
                 .padding(.bottom, 40)
                 
@@ -44,18 +44,18 @@ public struct PINSetupView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text(viewModel.headerTitle)
                 .font(.system(size: 24, weight: .bold))
-                .foregroundColor(.label)
+                .foregroundColor(ColorTokens.Text.primary)
             
             Text(viewModel.headerSubtitle)
                 .font(.system(size: 16))
-                .foregroundColor(.secondaryLabel)
+                .foregroundColor(ColorTokens.Text.secondary)
             
-            if viewModel.isError {
-                Text(viewModel.errorMessage)
-                    .font(.system(size: 14))
-                    .foregroundColor(.red)
-                    .padding(.top, 8)
-            }
+            Text(viewModel.errorMessage)
+                .font(.system(size: 14))
+                .foregroundColor(.red)
+                .padding(.top, 8)
+                .opacity(viewModel.isError ? 1 : 0) // Alpha 값 조절
+                .animation(.easeInOut, value: viewModel.isError) // 애니메이션 추가
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -71,12 +71,11 @@ public struct PINSetupView: View {
                 .font(.system(size: 18, weight: .medium))
                 .multilineTextAlignment(.center)
             
-            TossButton(
-                title: "완료",
-                style: .filled,
-                size: .large,
-                action: onCompleted
-            )
+            TossButton(style: .primary, size: .large) {
+                onCompleted()
+            } label: {
+                Text("완료")
+            }
             .padding(.top, 20)
         }
         .padding(.horizontal, 24)

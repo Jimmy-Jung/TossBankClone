@@ -32,7 +32,22 @@ let project = Project(
             dependencies: [
                 .target(name: "TossBankKit"),
                 .target(name: "DesignSystem"),
-                .target(name: "NetworkModule")
+                .target(name: "NetworkModule"),
+                .target(name: "AuthFeature")
+            ]
+        ),
+        .target(
+            name: "AuthFeature",
+            destinations: .iOS,
+            product: .framework,
+            bundleId: "io.tuist.TossBankClone.authfeature",
+            infoPlist: .default,
+            sources: ["Modules/Features/Auth/Sources/**"],
+            resources: ["Modules/Features/Auth/Resources/**"],
+            dependencies: [
+                .target(name: "TossBankKit"),
+                .target(name: "NetworkModule"),
+                .target(name: "DesignSystem")
             ]
         ),
         .target(

@@ -15,7 +15,10 @@ public struct PINKeypad: View {
     ]
     
     // MARK: - 생성자
-    public init(onNumberTapped: @escaping (Int) -> Void, onDeleteTapped: @escaping () -> Void) {
+    public init(
+        onNumberTapped: @escaping (Int) -> Void,
+        onDeleteTapped: @escaping () -> Void
+    ) {
         self.onNumberTapped = onNumberTapped
         self.onDeleteTapped = onDeleteTapped
     }
@@ -75,41 +78,11 @@ public struct PINKeypad: View {
     }
 }
 
-struct ScaleButtonStyle: ButtonStyle {
+struct ScaleButtonStyle: SwiftUI.ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .scaleEffect(configuration.isPressed ? 0.95 : 1)
             .animation(.spring(), value: configuration.isPressed)
-    }
-}
-
-// MARK: - PIN 표시기
-public struct PINIndicator: View {
-    // MARK: - 속성
-    private let pinLength: Int
-    private let isError: Bool
-    private let maxLength: Int
-    
-    // MARK: - 생성자
-    public init(pinLength: Int, isError: Bool = false, maxLength: Int = 6) {
-        self.pinLength = pinLength
-        self.isError = isError
-        self.maxLength = maxLength
-    }
-    
-    // MARK: - 바디
-    public var body: some View {
-        HStack(spacing: 16) {
-            ForEach(0..<maxLength, id: \.self) { index in
-                Circle()
-                    .fill(index < pinLength
-                          ? (isError ? ColorTokens.State.error : ColorTokens.Brand.primary)
-                          : ColorTokens.Background.secondary)
-                    .frame(width: 16, height: 16)
-                    .animation(.spring(response: 0.2), value: pinLength)
-                    .animation(.spring(response: 0.2), value: isError)
-            }
-        }
     }
 }
 

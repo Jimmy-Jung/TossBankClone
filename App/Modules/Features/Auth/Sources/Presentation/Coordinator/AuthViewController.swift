@@ -1,6 +1,7 @@
 import UIKit
 import SwiftUI
 import TossBankKit
+import DesignSystem
 
 public class AuthViewController: UIViewController {
     // MARK: - 속성
@@ -20,7 +21,7 @@ public class AuthViewController: UIViewController {
     // MARK: - 라이프사이클
     public override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = ColorTokens.Background.primary
+        view.backgroundColor = .backgroundPrimary
         setupInitialScreen()
     }
     
@@ -40,7 +41,7 @@ public class AuthViewController: UIViewController {
     private func showPINLoginView() {
         let pinLoginView = PINLoginView { [weak self] in
             // 로그인 성공 시 메인 화면으로 이동
-            self?.coordinator?.didFinishAuthentication()
+            // self?.coordinator?.didFinishAuthentication()
         }
         
         let hostingController = UIHostingController(rootView: pinLoginView)
@@ -61,7 +62,7 @@ public class AuthViewController: UIViewController {
     private func showPINSetupView() {
         let pinSetupView = PINSetupView { [weak self] in
             // PIN 설정 완료 시 로그인 화면으로 전환
-            self?.coordinator?.didFinishAuthentication()
+            // self?.coordinator?.didFinishAuthentication()
         }
         
         let hostingController = UIHostingController(rootView: pinSetupView)
