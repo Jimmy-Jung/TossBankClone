@@ -12,9 +12,11 @@ extension URLSession: URLSessionProtocol { }
 
 /// 네트워크 서비스 인터페이스
 public protocol NetworkServiceProtocol {
-    /// Endpoint를 사용한 요청
-    func request<T: Decodable>(_ endpoint: Endpoint<T>) async throws -> T
-    func upload<T: Decodable>(to endpoint: Endpoint<T>, data: Data, mimeType: String) async throws -> T
+    /// URLRequest를 사용한 요청
+    func request<T: Decodable>(_ request: URLRequest, responseType: T.Type) async throws -> T
+    
+    /// 파일 업로드 요청
+    func upload<T: Decodable>(_ request: URLRequest, data: Data, mimeType: String, responseType: T.Type) async throws -> T
 }
 
 /// 네트워크 서비스 구현체
@@ -104,17 +106,14 @@ public final class NetworkService: NetworkServiceProtocol {
     }
     
     // MARK: - 요청 메서드
-    public func request<T: Decodable>(_ endpoint: Endpoint<T>) async throws -> T {
-        // URLRequest 생성
-        var urlRequest = try endpoint.asURLRequest(baseURL: baseURL)
-        
+    public func request<T: Decodable>(_ request: URLRequest, responseType: T.Type) async throws -> T {
         // 네트워크 요청 실행 및 응답 처리
-        return try await performRequest(urlRequest)
+        return try await performRequest(request)
     }
     
-    public func upload<T: Decodable>(to endpoint: Endpoint<T>, data: Data, mimeType: String) async throws -> T {
-        // URLRequest 생성
-        var urlRequest = try endpoint.asURLRequest(baseURL: baseURL)
+    public func upload<T: Decodable>(_ request: URLRequest, data: Data, mimeType: String, responseType: T.Type) async throws -> T {
+        // URLRequest 복사
+        var urlRequest = request
         
         // 업로드를 위한 설정
         urlRequest.httpMethod = "POST"

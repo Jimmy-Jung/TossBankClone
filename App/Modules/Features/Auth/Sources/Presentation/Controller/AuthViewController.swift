@@ -1,6 +1,6 @@
 import UIKit
+import AuthenticationModule
 import SwiftUI
-import TossBankKit
 import DesignSystem
 
 public class AuthViewController: UIViewController {

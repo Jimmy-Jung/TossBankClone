@@ -1,9 +1,28 @@
 import SwiftUI
+import AuthenticationModule
 import Combine
-import TossBankKit
 import LocalAuthentication
+import SharedModule
 
-public final class PINLoginViewModel: ObservableObject {
+public final class PINLoginViewModel {
+    // MARK: - Input & Action
+    public enum Input {
+        case viewDidLoad
+        case numberTapped(Int)
+        case deleteTapped
+        case useBiometrics
+    }
+    
+    public enum Action {
+        case updatePIN(String)
+        case authenticateWithPIN
+        case authenticateWithBiometrics
+        case resetError
+        case lockAccount
+        case showError(String)
+        case checkBiometricAvailability
+    }
+    
     // MARK: - 상태 열거형
     public enum LoginState {
         case initial
@@ -24,7 +43,6 @@ public final class PINLoginViewModel: ObservableObject {
     
     // MARK: - 의존성
     private let authManager: AuthenticationManager
-    private var cancellables = Set<AnyCancellable>()
     
     // MARK: - 계산 속성
     public var headerTitle: String {
@@ -60,93 +78,132 @@ public final class PINLoginViewModel: ObservableObject {
     // MARK: - 생성자
     public init(authManager: AuthenticationManager = AuthenticationManager.shared) {
         self.authManager = authManager
-        checkBiometricAvailability()
     }
-    
-    // MARK: - 공개 메서드
-    public func onNumberTapped(_ number: Int) {
-        guard pin.count < 6 && currentState != .locked else { return }
-        
-        if isError {
-            resetError()
+}
+
+// MARK: - AsyncViewModel
+extension PINLoginViewModel: AsyncViewModel {
+    public nonisolated func transform(_ input: Input) async -> [Action] {
+        switch input {
+        case .viewDidLoad:
+            return [.checkBiometricAvailability]
+            
+        case .numberTapped(let number):
+            guard pin.count < 6 && currentState != .locked else { return [] }
+            
+            var actions: [Action] = []
+            
+            if isError {
+                actions.append(.resetError)
+            }
+            
+            let updatedPIN = pin + "\(number)"
+            actions.append(.updatePIN(updatedPIN))
+            
+            if updatedPIN.count == 6 {
+                actions.append(.authenticateWithPIN)
+            }
+            
+            return actions
+            
+        case .deleteTapped:
+            guard !pin.isEmpty && currentState != .locked else { return [] }
+            
+            var actions: [Action] = []
+            
+            if isError {
+                actions.append(.resetError)
+            }
+            
+            let updatedPIN = String(pin.dropLast())
+            actions.append(.updatePIN(updatedPIN))
+            
+            return actions
+            
+        case .useBiometrics:
+            guard isBiometricAvailable else { return [] }
+            return [.authenticateWithBiometrics]
         }
-        
-        pin.append("\(number)")
-        
-        if pin.count == 6 {
-            authenticateWithPIN()
+    }
+    
+    public func perform(_ action: Action) async throws {
+        switch action {
+        case .updatePIN(let updatedPIN):
+            try await updatePIN(updatedPIN)
+        case .authenticateWithPIN:
+            try await authenticateWithPIN()
+        case .authenticateWithBiometrics:
+            try await authenticateWithBiometrics()
+        case .resetError:
+            await resetError()
+        case .lockAccount:
+            await lockAccount()
+        case .showError(let message):
+            await showError(message: message)
+        case .checkBiometricAvailability:
+            await checkBiometricAvailability()
         }
     }
     
-    public func onDeleteTapped() {
-        guard !pin.isEmpty && currentState != .locked else { return }
-        
-        if isError {
-            resetError()
-        }
-        
-        pin.removeLast()
+    public func handleError(_ error: Error) async {
+        await showError(message: "오류가 발생했습니다: \(error.localizedDescription)")
+    }
+}
+
+// MARK: - 내부 메서드
+private extension PINLoginViewModel {
+    func updatePIN(_ updatedPIN: String) async throws {
+        pin = updatedPIN
     }
     
-    public func authenticateWithBiometrics() {
-        guard isBiometricAvailable else { return }
-        
-        currentState = .authenticating
-        
-        // authManager.authenticateBiometric()
-        //     .receive(on: DispatchQueue.main)
-        //     .sink { [weak self] completion in
-        //         if case .failure(let error) = completion {
-        //             self?.showError(message: "생체 인증에 실패했습니다: \(error.localizedDescription)")
-        //         }
-        //     } receiveValue: { [weak self] success in
-        //         if success {
-        //             self?.handleAuthenticationSuccess()
-        //         } else {
-        //             self?.showError(message: "생체 인증에 실패했습니다. PIN을 입력해주세요.")
-        //         }
-        //     }
-        //     .store(in: &cancellables)
-    }
-    
-    // MARK: - 비공개 메서드
-    private func authenticateWithPIN() {
+    func authenticateWithPIN() async throws {
         currentState = .authenticating
         
         // 인증 지연 시뮬레이션
-        // DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
-        //     guard let self = self else { return }
-        //     
-        //     self.authManager.validatePIN(self.pin)
-        //         .receive(on: DispatchQueue.main)
-        //         .sink { completion in
-        //             if case .failure(let error) = completion {
-        //                 self.showError(message: "인증 중 오류가 발생했습니다: \(error.localizedDescription)")
-        //             }
-        //         } receiveValue: { success in
-        //             if success {
-        //                 self.handleAuthenticationSuccess()
-        //             } else {
-        //                 self.remainingAttempts -= 1
-        //                 
-        //                 if self.remainingAttempts <= 0 {
-        //                     self.handleAccountLocked()
-        //                 } else {
-        //                     self.showError(message: "잘못된 PIN 번호입니다.")
-        //                 }
-        //             }
+        try await Task.sleep(nanoseconds: 500_000_000) // 0.5초 대기
+        
+        // 실제로는 아래와 같이 구현 예정
+        // do {
+        //     let isValid = try await authManager.validatePIN(pin)
+        //     if isValid {
+        //         await handleAuthenticationSuccess()
+        //     } else {
+        //         remainingAttempts -= 1
+        //         
+        //         if remainingAttempts <= 0 {
+        //             await lockAccount()
+        //         } else {
+        //             await showError(message: "잘못된 PIN 번호입니다.")
         //         }
-        //         .store(in: &self.cancellables)
+        //     }
+        // } catch {
+        //     await showError(message: "인증 중 오류가 발생했습니다: \(error.localizedDescription)")
         // }
     }
     
-    private func handleAuthenticationSuccess() {
+    func authenticateWithBiometrics() async throws {
+        currentState = .authenticating
+        
+        // 실제로는 아래와 같이 구현 예정
+        // do {
+        //     let isValid = try await authManager.authenticateBiometric()
+        //     if isValid {
+        //         await handleAuthenticationSuccess()
+        //     } else {
+        //         await showError(message: "생체 인증에 실패했습니다. PIN을 입력해주세요.")
+        //     }
+        // } catch {
+        //     await showError(message: "생체 인증에 실패했습니다: \(error.localizedDescription)")
+        // }
+    }
+    
+    func handleAuthenticationSuccess() async {
         withAnimation {
             currentState = .success
         }
     }
     
-    private func handleAccountLocked() {
+    func lockAccount() async {
         withAnimation {
             currentState = .locked
             errorMessage = "계정이 잠겼습니다. 관리자에게 문의하세요."
@@ -154,7 +211,7 @@ public final class PINLoginViewModel: ObservableObject {
         }
     }
     
-    private func showError(message: String) {
+    func showError(message: String) async {
         errorMessage = message
         pin = ""
         
@@ -164,7 +221,7 @@ public final class PINLoginViewModel: ObservableObject {
         }
     }
     
-    private func resetError() {
+    func resetError() async {
         withAnimation {
             isError = false
             errorMessage = ""
@@ -172,7 +229,7 @@ public final class PINLoginViewModel: ObservableObject {
         }
     }
     
-    private func checkBiometricAvailability() {
+    func checkBiometricAvailability() async {
         let context = LAContext()
         var error: NSError?
         
@@ -191,6 +248,27 @@ public final class PINLoginViewModel: ObservableObject {
         } else {
             biometricType = .none
             isBiometricAvailable = false
+        }
+    }
+}
+
+// MARK: - 공개 인터페이스
+extension PINLoginViewModel {
+    public func onNumberTapped(_ number: Int) {
+        Task {
+            await send(.numberTapped(number))
+        }
+    }
+    
+    public func onDeleteTapped() {
+        Task {
+            await send(.deleteTapped)
+        }
+    }
+    
+    public func authenticateWithBiometrics() {
+        Task {
+            await send(.useBiometrics)
         }
     }
 }

@@ -56,13 +56,16 @@ class NetworkModuleIntegrationTests: XCTestCase {
         mockURLSession.nextData = expectedData
         mockURLSession.nextResponse = response
         
-        // 엔드포인트 설정
-        let endpoint = Endpoint<TestItem>(path: "/items/1")
-            .addHeaders(["X-Custom-Header": "Custom-Value"])
-            .cachePolicy(.useProtocolCachePolicy)
+        // API 요청 설정
+        let testRequest = TestAPIRequest<TestItem>(
+            path: "/items/1",
+            headers: ["X-Custom-Header": "Custom-Value"],
+            cachePolicyForURLRequest: .useProtocolCachePolicy
+        )
+        let urlRequest = try testRequest.asURLRequest(baseURL: baseURL)
         
         // When
-        let result = try await networkService.request(endpoint)
+        let result = try await networkService.request(urlRequest, responseType: TestItem.self)
         
         // Then
         // 결과 검증
@@ -108,11 +111,12 @@ class NetworkModuleIntegrationTests: XCTestCase {
         // 업로드할 데이터
         let uploadData = "테스트 이미지 데이터".data(using: .utf8)!
         
-        // 엔드포인트 설정
-        let endpoint = Endpoint<TestItem>(path: "/upload", method: .POST)
+        // API 요청 설정
+        let testRequest = TestAPIRequest<TestItem>(path: "/upload", method: .post)
+        let urlRequest = try testRequest.asURLRequest(baseURL: baseURL)
         
         // When
-        let result = try await networkService.upload(to: endpoint, data: uploadData, mimeType: "image/jpeg")
+        let result = try await networkService.upload(urlRequest, data: uploadData, mimeType: "image/jpeg", responseType: TestItem.self)
         
         // Then
         // 결과 검증
@@ -156,8 +160,8 @@ class NetworkModuleIntegrationTests: XCTestCase {
         mockURLSession.nextData = errorData
         mockURLSession.nextResponse = errorResponse
         
-        // 엔드포인트 설정
-        let endpoint = Endpoint<TestItem>(path: "/error")
+        // API 요청 설정
+        let testRequest = TestAPIRequest<TestItem>(path: "/error")
         
         // When/Then
         // 재시도 수동 구현
@@ -166,7 +170,8 @@ class NetworkModuleIntegrationTests: XCTestCase {
         
         while retryCount <= maxRetries {
             do {
-                _ = try await networkService.request(endpoint)
+                let urlRequest = try testRequest.asURLRequest(baseURL: baseURL)
+                _ = try await networkService.request(urlRequest, responseType: TestItem.self)
                 XCTFail("요청이 성공해서는 안 됩니다")
                 break
             } catch {
@@ -202,12 +207,13 @@ class NetworkModuleIntegrationTests: XCTestCase {
             reachability: mockReachability
         )
         
-        // 엔드포인트 설정
-        let endpoint = Endpoint<TestItem>(path: "/items/1")
+        // API 요청 설정
+        let testRequest = TestAPIRequest<TestItem>(path: "/items/1")
         
         // When/Then
         do {
-            _ = try await networkService.request(endpoint)
+            let urlRequest = try testRequest.asURLRequest(baseURL: baseURL)
+            _ = try await networkService.request(urlRequest, responseType: TestItem.self)
             XCTFail("오프라인 상태에서 요청이 성공해서는 안 됩니다")
         } catch let error as NetworkError {
             XCTAssertEqual(error, NetworkError.offline)
@@ -224,6 +230,41 @@ private struct TestItem: Decodable {
     let id: Int
     let name: String
 }
+
+// 테스트용 APIRequest 구현
+private struct TestAPIRequest<T: Decodable>: APIRequest {
+    typealias Response = T
+    
+    let path: String
+    let method: HTTPMethod
+    let headers: HTTPHeaders?
+    let queryParameters: [String: String]?
+    let requestBody: RequestBody
+    let requiresAuth: Bool
+    let cachePolicyForURLRequest: URLRequest.CachePolicy
+    let timeoutInterval: TimeInterval
+    
+    init(
+        path: String,
+        method: HTTPMethod = .get,
+        headers: HTTPHeaders? = nil,
+        queryParameters: [String: String]? = nil,
+        requestBody: RequestBody = .none,
+        requiresAuth: Bool = true,
+        cachePolicyForURLRequest: URLRequest.CachePolicy = .useProtocolCachePolicy,
+        timeoutInterval: TimeInterval = 30.0
+    ) {
+        self.path = path
+        self.method = method
+        self.headers = headers
+        self.queryParameters = queryParameters
+        self.requestBody = requestBody
+        self.requiresAuth = requiresAuth
+        self.cachePolicyForURLRequest = cachePolicyForURLRequest
+        self.timeoutInterval = timeoutInterval
+    }
+}
+
 // 모의 URLSession 구현
 private class MockURLSession: URLSessionProtocol {
     var nextData: Data = Data()
@@ -253,7 +294,8 @@ private class MockURLSession: URLSessionProtocol {
     }
 }
 
+// 모의 네트워크 연결 상태
 private class MockNetworkReachability: NetworkReachability {
-    var isConnected: Bool = true
     var didChangeStatus: ((Bool) -> Void)?
+    var isConnected: Bool = true
 } 

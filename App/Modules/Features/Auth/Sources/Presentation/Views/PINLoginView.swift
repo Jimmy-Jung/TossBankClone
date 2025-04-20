@@ -1,6 +1,5 @@
 import SwiftUI
 import DesignSystem
-import TossBankKit
 
 public struct PINLoginView: View {
     @StateObject private var viewModel = PINLoginViewModel()

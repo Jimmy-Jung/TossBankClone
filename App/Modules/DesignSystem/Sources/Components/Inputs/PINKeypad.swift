@@ -1,5 +1,5 @@
 import SwiftUI
-import SwiftData
+import Foundation
 
 /// PIN 코드 입력을 위한 커스텀 키패드 컴포넌트
 public struct PINKeypad: View {

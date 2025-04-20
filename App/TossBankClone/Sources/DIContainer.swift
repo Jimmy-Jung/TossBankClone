@@ -14,6 +14,7 @@ public final class AppDIContainer: AppDIContainerProtocol {
     private let accountRepository: AccountRepositoryProtocol
     private let authenticationManager: AuthenticationManager
     private let networkService: NetworkServiceProtocol
+    private let apiClient: APIClient
     
     // MARK: - 생성자
     private init() {
@@ -24,15 +25,15 @@ public final class AppDIContainer: AppDIContainerProtocol {
             authTokenProvider: { UserDefaults.standard.string(forKey: "authToken") }
         )
         
+        // API 클라이언트 초기화
+        self.apiClient = NetworkAPIClient(
+            networkService: networkService,
+            baseURL: baseURL
+        )
+        
         // 인증 관리자 초기화
         self.authenticationManager = AuthenticationManager.shared
-        
-        // 계정 리포지토리 초기화
-        do {
-            self.accountRepository = try AccountRepositoryImpl()
-        } catch {
-            fatalError("계정 리포지토리 초기화 실패: \(error.localizedDescription)")
-        }
+        self.accountRepository = AccountRepositoryImpl(apiClient: apiClient)
     }
     
     // MARK: - DIContainer 팩토리 메서드

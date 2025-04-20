@@ -2,9 +2,9 @@ import Foundation
 import UIKit
 import CoordinatorModule
 import DomainModule
-import Features.Auth
-import Features.Account
-import Features.Settings
+import AuthFeature
+import AccountFeature
+import SettingsFeature
 
 /// 앱 코디네이터 구현
 public final class AppCoordinator: NSObject, Coordinator {

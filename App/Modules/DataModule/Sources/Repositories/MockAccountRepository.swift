@@ -1,267 +1,232 @@
 import Foundation
-import SwiftData
 import DomainModule
 
-/// 테스트용 가상 데이터 생성기
-public final class MockDataGenerator {
-    /// 모델 컨텍스트에 가상 데이터 생성
-    /// - Parameter context: 모델 컨텍스트
-    public static func generateMockData(in context: ModelContext) {
-        // 가상 계좌 생성
-        let checkingAccount = Account(
-            id: "check-001",
-            name: "기본 입출금 통장",
+/// 모의 데이터 생성기
+public class MockDataGenerator {
+    /// 모의 계좌 데이터 생성
+    /// - Parameter accounts: 계좌 배열 참조
+    public static func generateMockData(into accounts: inout [AccountEntity]) {
+        // 계좌 데이터 생성
+        var checkingAccount = AccountEntity(
+            id: "checking-123",
+            name: "직장인 통장",
             type: .checking,
-            balance: 1_250_000,
-            number: "352-1234-5678-01",
-            isActive: true
+            balance: 1250000,
+            number: "1234-56-7890123",
+            isActive: true,
+            updatedAt: Date(),
+            transactions: []
         )
         
-        let savingsAccount = Account(
-            id: "save-001",
+        var savingsAccount = AccountEntity(
+            id: "savings-456",
             name: "비상금 저축",
             type: .savings,
-            balance: 5_000_000,
-            number: "212-8765-4321-02",
-            isActive: true
+            balance: 5000000,
+            number: "9876-54-3210987",
+            isActive: true,
+            updatedAt: Date(),
+            transactions: []
         )
         
-        let loanAccount = Account(
-            id: "loan-001",
-            name: "생활대출",
-            type: .loan,
-            balance: -2_000_000,
-            number: "422-9966-8877-03",
-            isActive: true
+        var investmentAccount = AccountEntity(
+            id: "investment-789",
+            name: "주식 계좌",
+            type: .investment,
+            balance: 3000000,
+            number: "5678-90-1234567",
+            isActive: true,
+            updatedAt: Date(),
+            transactions: []
         )
         
-        // 가상 거래 내역 생성
-        let transactions1 = [
-            createTransaction(
-                account: checkingAccount,
-                amount: 50000,
-                type: .deposit,
-                description: "급여",
-                category: .income,
-                dayOffset: -1,
-                merchant: "토스뱅크 (주)"
-            ),
-            createTransaction(
-                account: checkingAccount,
-                amount: -15000,
-                type: .payment,
-                description: "스타벅스",
-                category: .food,
-                dayOffset: -1,
-                location: "서울시 강남구",
-                merchant: "스타벅스"
-            ),
-            createTransaction(
-                account: checkingAccount,
-                amount: -30000,
-                type: .payment,
-                description: "식사",
-                category: .food,
-                dayOffset: -2,
-                location: "서울시 강남구",
-                merchant: "맛있는 레스토랑"
-            ),
-            createTransaction(
-                account: checkingAccount,
-                amount: -50000,
-                type: .transfer,
-                description: "친구에게 송금",
-                category: .transfer,
-                dayOffset: -3
-            ),
-            createTransaction(
-                account: checkingAccount,
-                amount: -9900,
-                type: .payment,
-                description: "넷플릭스 구독",
-                category: .entertainment,
-                dayOffset: -5,
-                merchant: "넷플릭스"
-            )
-        ]
-        
-        let transactions2 = [
-            createTransaction(
-                account: savingsAccount,
-                amount: 500000,
-                type: .deposit,
-                description: "저축",
-                category: .transfer,
-                dayOffset: -30
-            ),
-            createTransaction(
-                account: savingsAccount,
-                amount: 300000,
-                type: .deposit,
-                description: "저축",
-                category: .transfer,
-                dayOffset: -60
-            )
-        ]
-        
-        let transactions3 = [
-            createTransaction(
-                account: loanAccount,
-                amount: -50000,
-                type: .fee,
-                description: "이자",
-                category: .other,
-                dayOffset: -10
-            )
-        ]
-        
-        // 데이터 삽입
-        [checkingAccount, savingsAccount, loanAccount].forEach { context.insert($0) }
-        
-        // 저장
-        do {
-            try context.save()
-        } catch {
-            print("Mock 데이터 저장 오류: \(error)")
-        }
-    }
-    
-    /// 가상 거래내역 생성
-    private static func createTransaction(
-        account: Account,
-        amount: Decimal,
-        type: TransactionType,
-        description: String,
-        category: TransactionCategory,
-        dayOffset: Int,
-        location: String? = nil,
-        merchant: String? = nil
-    ) -> Transaction {
-        let date = Calendar.current.date(byAdding: .day, value: dayOffset, to: Date())!
-        
-        let transaction = Transaction(
-            id: UUID().uuidString,
-            amount: amount,
-            type: type,
-            description: description,
-            category: category,
-            date: date,
-            account: account
+        // 거래내역 생성 및 계좌에 추가
+        var transaction1 = TransactionEntity(
+            id: "trans-1",
+            amount: 50000,
+            type: .deposit,
+            description: "월급",
+            category: .income,
+            date: Date().addingTimeInterval(-86400), // 1일 전
+            isOutgoing: false,
+            account: checkingAccount
         )
         
-        if location != nil || merchant != nil {
-            transaction.metadata = TransactionMetadata(
-                location: location,
-                merchantName: merchant,
-                merchantLogo: merchant != nil ? "\(merchant!.lowercased().replacingOccurrences(of: " ", with: "_"))_logo" : nil
-            )
-        }
+        let transaction2 = TransactionEntity(
+            id: "trans-2",
+            amount: 15000,
+            type: .withdrawal,
+            description: "ATM 출금",
+            category: .other,
+            date: Date().addingTimeInterval(-43200), // 12시간 전
+            isOutgoing: true,
+            account: checkingAccount
+        )
         
-        return transaction
+        var transaction3 = TransactionEntity(
+            id: "trans-3",
+            amount: 30000,
+            type: .payment,
+            description: "카페",
+            category: .food,
+            date: Date().addingTimeInterval(-21600), // 6시간 전
+            isOutgoing: true,
+            account: checkingAccount
+        )
+        
+        var transaction4 = TransactionEntity(
+            id: "trans-4",
+            amount: 100000,
+            type: .transfer,
+            description: "비상금 저축",
+            category: .transfer,
+            date: Date().addingTimeInterval(-7200), // 2시간 전
+            isOutgoing: false,
+            account: savingsAccount
+        )
+        
+        var transaction5 = TransactionEntity(
+            id: "trans-5",
+            amount: 100000,
+            type: .transfer,
+            description: "비상금 저축",
+            category: .transfer,
+            date: Date().addingTimeInterval(-7200), // 2시간 전
+            isOutgoing: false,
+            account: checkingAccount
+        )
+        
+        var transaction6 = TransactionEntity(
+            id: "trans-6",
+            amount: 500000,
+            type: .transfer,
+            description: "주식 매수",
+            category: .transfer,
+            date: Date().addingTimeInterval(-172800), // 2일 전
+            isOutgoing: true,
+            account: investmentAccount
+        )
+        
+        var transaction7 = TransactionEntity(
+            id: "trans-7",
+            amount: 500000,
+            type: .transfer,
+            description: "주식 매수",
+            category: .transfer,
+            date: Date().addingTimeInterval(-172800), // 2일 전
+            isOutgoing: true,
+            account: checkingAccount
+        )
+        
+        // 거래내역 추가
+        checkingAccount.transactions = [transaction1, transaction2, transaction3, transaction5, transaction7]
+        savingsAccount.transactions = [transaction4]
+        investmentAccount.transactions = [transaction6]
+        
+        // 계좌 추가
+        accounts = [checkingAccount, savingsAccount, investmentAccount]
     }
 }
 
-/// 목(Mock) 계좌 저장소 구현
+/// 목업 계좌 리포지토리 구현
 public class MockAccountRepository: AccountRepositoryProtocol {
-    private let modelContainer: ModelContainer
-    private let modelContext: ModelContext
+    // 인메모리 저장소
+    private var accounts: [AccountEntity] = []
     
-    public init() throws {
-        // 인메모리 컨테이너 생성
-        let schema = Schema([
-            Account.self,
-            Transaction.self,
-            TransactionMetadata.self
-        ])
-        
-        let configuration = ModelConfiguration(
-            schema: schema,
-            isStoredInMemoryOnly: true
-        )
-        
-        self.modelContainer = try ModelContainer(
-            for: schema,
-            configurations: [configuration]
-        )
-        self.modelContext = ModelContext(modelContainer)
-        
-        // 가상 데이터 생성
-        MockDataGenerator.generateMockData(in: modelContext)
+    /// 초기화
+    public init() {
+        MockDataGenerator.generateMockData(into: &accounts)
     }
     
-    public func fetchAccounts() async throws -> [Account] {
-        let descriptor = FetchDescriptor<Account>(sortBy: [SortDescriptor(\.updatedAt, order: .reverse)])
-        return try modelContext.fetch(descriptor)
+    /// 모든 계좌 조회
+    public func fetchAccounts() async throws -> [AccountEntity] {
+        return accounts.sorted { $0.updatedAt.timeIntervalSince1970 > $1.updatedAt.timeIntervalSince1970 }
     }
     
-    public func fetchAccount(withId id: String) async throws -> Account? {
-        let predicate = #Predicate<Account> { $0.id == id }
-        let descriptor = FetchDescriptor<Account>(predicate: predicate)
-        let accounts = try modelContext.fetch(descriptor)
-        return accounts.first
+    /// 단일 계좌 조회
+    public func fetchAccount(withId id: String) async throws -> AccountEntity? {
+        return accounts.first { $0.id == id }
     }
     
-    public func fetchTransactions(forAccountId accountId: String, limit: Int, offset: Int) async throws -> [Transaction] {
-        let predicate = #Predicate<Transaction> { $0.account?.id == accountId }
-        var descriptor = FetchDescriptor<Transaction>(predicate: predicate)
-        descriptor.sortBy = [SortDescriptor(\.date, order: .reverse)]
-        descriptor.fetchLimit = limit
-        descriptor.fetchOffset = offset
-        
-        return try modelContext.fetch(descriptor)
+    /// 계좌 저장
+    public func saveAccount(_ account: AccountEntity) async throws {
+        if let index = accounts.firstIndex(where: { $0.id == account.id }) {
+            accounts[index] = account
+        } else {
+            accounts.append(account)
+        }
     }
     
-    public func saveAccount(_ account: Account) async throws {
-        modelContext.insert(account)
-        try modelContext.save()
-    }
-    
+    /// 계좌 삭제
     public func deleteAccount(withId id: String) async throws {
-        guard let account = try await fetchAccount(withId: id) else {
+        guard let index = accounts.firstIndex(where: { $0.id == id }) else {
+            throw RepositoryError.itemNotFound
+        }
+        accounts.remove(at: index)
+    }
+    
+    /// 계좌 업데이트
+    public func updateAccount(_ account: AccountEntity) async throws {
+        if let index = accounts.firstIndex(where: { $0.id == account.id }) {
+            accounts[index] = account
+        } else {
+            throw RepositoryError.itemNotFound
+        }
+    }
+    
+    /// 계좌 거래내역 조회
+    public func fetchTransactions(forAccountId accountId: String, limit: Int, offset: Int) async throws -> [TransactionEntity] {
+        guard let account = accounts.first(where: { $0.id == accountId }),
+              let transactions = account.transactions else {
+            return []
+        }
+        
+        let sortedTransactions = transactions.sorted { $0.date > $1.date }
+        
+        if offset < sortedTransactions.count {
+            let endIndex = min(offset + limit, sortedTransactions.count)
+            return Array(sortedTransactions[offset..<endIndex])
+        } else {
+            return []
+        }
+    }
+    
+    /// 거래내역 추가
+    public func addTransaction(_ transaction: TransactionEntity, toAccountWithId accountId: String) async throws {
+        var tempTransaction = transaction
+        guard let index = accounts.firstIndex(where: { $0.id == accountId }) else {
             throw RepositoryError.itemNotFound
         }
         
-        modelContext.delete(account)
-        try modelContext.save()
-    }
-    
-    public func updateAccount(_ account: Account) async throws {
-        try modelContext.save()
-    }
-    
-    public func addTransaction(_ transaction: Transaction, toAccountWithId accountId: String) async throws {
-        guard let account = try await fetchAccount(withId: accountId) else {
-            throw RepositoryError.itemNotFound
-        }
-        
+        var account = accounts[index]
         if account.transactions == nil {
             account.transactions = []
         }
         
-        transaction.account = account
+        tempTransaction.account = account
         account.transactions?.append(transaction)
         
         // 잔액 업데이트
         switch transaction.type {
         case .deposit:
-            account.balance += transaction.amount
+            account.balance += tempTransaction.amount
         case .withdrawal:
-            account.balance -= transaction.amount
+            account.balance -= tempTransaction.amount
         case .transfer:
-            if transaction.metadata?.reference == "incoming" {
-                account.balance += transaction.amount
-            } else {
-                account.balance -= transaction.amount
+            if tempTransaction.isOutgoing {
+                account.balance -= tempTransaction.amount
+            } else { // outgoing 또는 reference가 nil인 경우 포함
+                account.balance += tempTransaction.amount
             }
+            
         case .payment:
-            account.balance -= transaction.amount
+            account.balance -= tempTransaction.amount
         case .fee:
-            account.balance -= transaction.amount
+            account.balance -= tempTransaction.amount
         }
         
         account.updatedAt = Date()
         
-        modelContext.insert(transaction)
-        try modelContext.save()
+        accounts[index] = account
     }
 } 

@@ -44,10 +44,11 @@ class NetworkServiceTests: XCTestCase {
         mockURLSession.nextData = expectedData
         mockURLSession.nextResponse = response
         
-        let endpoint = Endpoint<TestModel>(path: "/test")
+        let testRequest = TestAPIRequest<TestModel>(path: "/test")
+        let urlRequest = try testRequest.asURLRequest(baseURL: baseURL)
         
         // When
-        let result = try await sut.request(endpoint)
+        let result = try await sut.request(urlRequest, responseType: TestModel.self)
         
         // Then
         XCTAssertEqual(result.id, 1)
@@ -62,11 +63,12 @@ class NetworkServiceTests: XCTestCase {
         mockURLSession.nextData = expectedData
         mockURLSession.nextResponse = response
         
-        let endpoint = Endpoint<TestModel>(path: "/upload")
+        let testRequest = TestAPIRequest<TestModel>(path: "/upload", method: .post)
+        let urlRequest = try testRequest.asURLRequest(baseURL: baseURL)
         let uploadData = "테스트 데이터".data(using: .utf8)!
         
         // When
-        let result = try await sut.upload(to: endpoint, data: uploadData, mimeType: "text/plain")
+        let result = try await sut.upload(urlRequest, data: uploadData, mimeType: "text/plain", responseType: TestModel.self)
         
         // Then
         XCTAssertEqual(result.id, 2)
@@ -82,11 +84,12 @@ class NetworkServiceTests: XCTestCase {
         mockURLSession.nextData = errorData
         mockURLSession.nextResponse = response
         
-        let endpoint = Endpoint<TestModel>(path: "/not-found")
+        let testRequest = TestAPIRequest<TestModel>(path: "/not-found")
         
         // When/Then
         do {
-            _ = try await sut.request(endpoint)
+            let urlRequest = try testRequest.asURLRequest(baseURL: baseURL)
+            _ = try await sut.request(urlRequest, responseType: TestModel.self)
             XCTFail("요청이 성공해서는 안됩니다")
         } catch let error as NetworkError {
             if case .httpError(let statusCode, _) = error {
@@ -111,11 +114,12 @@ class NetworkServiceTests: XCTestCase {
             reachability: mockReachability
         )
         
-        let endpoint = Endpoint<TestModel>(path: "/test")
+        let testRequest = TestAPIRequest<TestModel>(path: "/test")
         
         // When/Then
         do {
-            _ = try await sut.request(endpoint)
+            let urlRequest = try testRequest.asURLRequest(baseURL: baseURL)
+            _ = try await sut.request(urlRequest, responseType: TestModel.self)
             XCTFail("인터넷 연결이 없을 때 요청이 성공해서는 안됩니다")
         } catch let error as NetworkError {
             XCTAssertEqual(error, NetworkError.offline)
@@ -142,10 +146,11 @@ class NetworkServiceTests: XCTestCase {
         mockURLSession.nextData = expectedData
         mockURLSession.nextResponse = response
         
-        let endpoint = Endpoint<TestModel>(path: "/test")
+        let testRequest = TestAPIRequest<TestModel>(path: "/test")
+        let urlRequest = try testRequest.asURLRequest(baseURL: baseURL)
         
         // When
-        _ = try await sut.request(endpoint)
+        _ = try await sut.request(urlRequest, responseType: TestModel.self)
         
         // Then
         XCTAssertTrue(testPlugin.prepareWasCalled)
@@ -157,6 +162,40 @@ class NetworkServiceTests: XCTestCase {
 private struct TestModel: Decodable {
     let id: Int
     let name: String
+}
+
+// 테스트용 APIRequest 구현
+private struct TestAPIRequest<T: Decodable>: APIRequest {
+    typealias Response = T
+    
+    let path: String
+    let method: HTTPMethod
+    let headers: HTTPHeaders?
+    let queryParameters: [String: String]?
+    let requestBody: RequestBody
+    let requiresAuth: Bool
+    let cachePolicyForURLRequest: URLRequest.CachePolicy
+    let timeoutInterval: TimeInterval
+    
+    init(
+        path: String,
+        method: HTTPMethod = .get,
+        headers: HTTPHeaders? = nil,
+        queryParameters: [String: String]? = nil,
+        requestBody: RequestBody = .none,
+        requiresAuth: Bool = true,
+        cachePolicyForURLRequest: URLRequest.CachePolicy = .useProtocolCachePolicy,
+        timeoutInterval: TimeInterval = 30.0
+    ) {
+        self.path = path
+        self.method = method
+        self.headers = headers
+        self.queryParameters = queryParameters
+        self.requestBody = requestBody
+        self.requiresAuth = requiresAuth
+        self.cachePolicyForURLRequest = cachePolicyForURLRequest
+        self.timeoutInterval = timeoutInterval
+    }
 }
 
 // MARK: - 모의 URLSession

@@ -36,6 +36,7 @@ let project = Project(
                 .target(name: "AuthenticationModule"),
                 .target(name: "CoordinatorModule"),
                 .target(name: "DesignSystem"),
+                .target(name: "SharedModule"),
                 .target(name: "AuthFeature"),
                 .target(name: "AccountFeature"),
                 .target(name: "SettingsFeature")
@@ -53,6 +54,7 @@ let project = Project(
                 .target(name: "DomainModule"),
                 .target(name: "NetworkModule"),
                 .target(name: "DesignSystem"),
+                .target(name: "SharedModule"),
                 .target(name: "AuthenticationModule"),
                 .target(name: "CoordinatorModule")
             ]
@@ -69,6 +71,7 @@ let project = Project(
                 .target(name: "DomainModule"),
                 .target(name: "NetworkModule"),
                 .target(name: "DesignSystem"),
+                .target(name: "SharedModule"),
                 .target(name: "CoordinatorModule")
             ]
         ),
@@ -83,6 +86,7 @@ let project = Project(
             dependencies: [
                 .target(name: "DomainModule"),
                 .target(name: "DesignSystem"),
+                .target(name: "SharedModule"),
                 .target(name: "CoordinatorModule")
             ]
         ),
@@ -143,6 +147,15 @@ let project = Project(
             dependencies: [
                 .target(name: "NetworkModule")
             ]
+        ),
+        .target(
+            name: "SharedModule",
+            destinations: .iOS,
+            product: .framework,
+            bundleId: "io.tuist.TossBankClone.shared",
+            infoPlist: .default,
+            sources: ["Modules/SharedModule/Sources/**"],
+            dependencies: []
         ),
         .target(
             name: "DesignSystem",

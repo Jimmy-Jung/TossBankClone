@@ -1,8 +1,24 @@
 import SwiftUI
+import AuthenticationModule
 import Combine
-import TossBankKit
+import SharedModule
 
-public final class PINSetupViewModel: ObservableObject {
+public final class PINSetupViewModel {
+    // MARK: - Input & Action
+    public enum Input {
+        case viewDidLoad
+        case numberTapped(Int)
+        case deleteTapped
+    }
+    
+    public enum Action {
+        case updateFirstPIN(String)
+        case updateConfirmPIN(String)
+        case proceedToConfirmation
+        case validatePINs
+        case resetError
+    }
+    
     // MARK: - 상태 열거형
     public enum SetupState {
         case initial      // 첫 번째 PIN 입력
@@ -20,7 +36,6 @@ public final class PINSetupViewModel: ObservableObject {
     
     // MARK: - 의존성
     private let authManager: AuthenticationManager
-    private var cancellables = Set<AnyCancellable>()
     
     // MARK: - 계산 속성
     public var activePIN: Binding<String> {
@@ -70,79 +85,124 @@ public final class PINSetupViewModel: ObservableObject {
     public init(authManager: AuthenticationManager = AuthenticationManager.shared) {
         self.authManager = authManager
     }
-    
-    // MARK: - 공개 메서드
-    public func onNumberTapped(_ number: Int) {
-        guard currentPINLength < 6 else { return }
-        
-        if isError {
-            resetError()
-        }
-        
-        if currentState == .initial {
-            firstPIN.append("\(number)")
-            if firstPIN.count == 6 {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                    self.proceedToConfirmation()
+}
+
+// MARK: - AsyncViewModel
+extension PINSetupViewModel: AsyncViewModel {
+    public nonisolated func transform(_ input: Input) async -> [Action] {
+        switch input {
+        case .viewDidLoad:
+            return []
+            
+        case .numberTapped(let number):
+            guard currentPINLength < 6 else { return [] }
+            
+            var actions: [Action] = []
+            
+            if isError {
+                actions.append(.resetError)
+            }
+            
+            if currentState == .initial {
+                let updatedPIN = firstPIN + "\(number)"
+                actions.append(.updateFirstPIN(updatedPIN))
+                
+                if updatedPIN.count == 6 {
+                    actions.append(.proceedToConfirmation)
+                }
+            } else {
+                let updatedPIN = confirmPIN + "\(number)"
+                actions.append(.updateConfirmPIN(updatedPIN))
+                
+                if updatedPIN.count == 6 {
+                    actions.append(.validatePINs)
                 }
             }
-        } else {
-            confirmPIN.append("\(number)")
-            if confirmPIN.count == 6 {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                    self.validatePINs()
-                }
+            
+            return actions
+            
+        case .deleteTapped:
+            var actions: [Action] = []
+            
+            if isError {
+                actions.append(.resetError)
             }
+            
+            if currentState == .initial && !firstPIN.isEmpty {
+                actions.append(.updateFirstPIN(String(firstPIN.dropLast())))
+            } else if currentState == .confirmation && !confirmPIN.isEmpty {
+                actions.append(.updateConfirmPIN(String(confirmPIN.dropLast())))
+            }
+            
+            return actions
         }
     }
     
-    public func onDeleteTapped() {
-        if isError {
-            resetError()
-        }
-        
-        if currentState == .initial && !firstPIN.isEmpty {
-            firstPIN.removeLast()
-        } else if currentState == .confirmation && !confirmPIN.isEmpty {
-            confirmPIN.removeLast()
+    public func perform(_ action: Action) async throws {
+        switch action {
+        case .updateFirstPIN(let pin):
+            try await updateFirstPIN(pin)
+        case .updateConfirmPIN(let pin):
+            try await updateConfirmPIN(pin)
+        case .proceedToConfirmation:
+            // 지연 시간은 async sleep으로 구현
+            try await Task.sleep(nanoseconds: 300_000_000) // 0.3초
+            await proceedToConfirmation()
+        case .validatePINs:
+            // 지연 시간은 async sleep으로 구현
+            try await Task.sleep(nanoseconds: 300_000_000) // 0.3초
+            await validatePINs()
+        case .resetError:
+            await resetError()
         }
     }
     
-    // MARK: - 비공개 메서드
-    private func proceedToConfirmation() {
+    public func handleError(_ error: Error) async {
+        await showError(message: "오류가 발생했습니다: \(error.localizedDescription)")
+    }
+}
+
+// MARK: - 내부 메서드
+private extension PINSetupViewModel {
+    func updateFirstPIN(_ pin: String) async throws {
+        firstPIN = pin
+    }
+    
+    func updateConfirmPIN(_ pin: String) async throws {
+        confirmPIN = pin
+    }
+    
+    func proceedToConfirmation() async {
         withAnimation {
             currentState = .confirmation
         }
     }
     
-    private func validatePINs() {
+    func validatePINs() async {
         if firstPIN == confirmPIN {
-            savePIN()
+            await savePIN()
         } else {
-            showError(message: "PIN 번호가 일치하지 않습니다. 다시 시도해주세요.")
+            await showError(message: "PIN 번호가 일치하지 않습니다. 다시 시도해주세요.")
         }
     }
     
-    private func savePIN() {
-        // authManager.savePIN(firstPIN)
-        //     .receive(on: DispatchQueue.main)
-        //     .sink { completion in
-        //         if case .failure(let error) = completion {
-        //             self.showError(message: "PIN 저장 중 오류가 발생했습니다: \(error.localizedDescription)")
+    func savePIN() async {
+        // 실제로는 아래와 같이 구현 예정
+        // do {
+        //     let success = try await authManager.savePIN(firstPIN)
+        //     if success {
+        //         withAnimation {
+        //             currentState = .success
         //         }
-        //     } receiveValue: { success in
-        //         if success {
-        //             withAnimation {
-        //                 self.currentState = .success
-        //             }
-        //         } else {
-        //             self.showError(message: "PIN 저장에 실패했습니다. 다시 시도해주세요.")
-        //         }
+        //     } else {
+        //         await showError(message: "PIN 저장에 실패했습니다. 다시 시도해주세요.")
         //     }
-        //     .store(in: &cancellables)
+        // } catch {
+        //     await showError(message: "PIN 저장 중 오류가 발생했습니다: \(error.localizedDescription)")
+        // }
     }
     
-    private func showError(message: String) {
+    func showError(message: String) async {
         errorMessage = message
         withAnimation {
             isError = true
@@ -151,10 +211,25 @@ public final class PINSetupViewModel: ObservableObject {
         }
     }
     
-    private func resetError() {
+    func resetError() async {
         withAnimation {
             isError = false
             errorMessage = ""
+        }
+    }
+}
+
+// MARK: - 공개 인터페이스
+extension PINSetupViewModel {
+    public func onNumberTapped(_ number: Int) {
+        Task {
+            await send(.numberTapped(number))
+        }
+    }
+    
+    public func onDeleteTapped() {
+        Task {
+            await send(.deleteTapped)
         }
     }
 } 

@@ -1,6 +1,5 @@
 import UIKit
 import SwiftUI
-import TossBankKit
 
 class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     var window: UIWindow?
@@ -11,9 +10,8 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         
         let window = UIWindow(windowScene: windowScene)
         self.window = window
-        
         // 앱 코디네이터 설정
-        let appDIContainer = AppDIContainer()
+        let appDIContainer = AppDIContainer.shared
         appCoordinator = AppCoordinator(window: window, diContainer: appDIContainer)
         appCoordinator?.start()
     }

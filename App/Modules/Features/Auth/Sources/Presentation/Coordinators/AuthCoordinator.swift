@@ -21,7 +21,22 @@ public final class AuthCoordinator: NSObject, Coordinator {
     }
     
     private func showLogin() {
-        // 로그인 화면 구현 코드가 추가될 예정
+        let viewController = UIViewController()
+        viewController.view.backgroundColor = .white
+        viewController.title = "로그인"
+        
+        // 임시 텍스트 레이블 추가
+        let label = UILabel()
+        label.text = "로그인 화면"
+        label.translatesAutoresizingMaskIntoConstraints = false
+        viewController.view.addSubview(label)
+        
+        NSLayoutConstraint.activate([
+            label.centerXAnchor.constraint(equalTo: viewController.view.centerXAnchor),
+            label.centerYAnchor.constraint(equalTo: viewController.view.centerYAnchor)
+        ])
+        
+        navigationController.pushViewController(viewController, animated: true)
     }
     
     private func showRegister() {
