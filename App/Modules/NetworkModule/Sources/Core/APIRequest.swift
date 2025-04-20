@@ -25,8 +25,8 @@ public protocol APIRequest {
     /// 쿼리 파라미터
     var queryParameters: [String: String]? { get }
     
-    /// 바디 파라미터
-    var bodyParameters: Encodable? { get }
+    /// 요청 바디
+    var requestBody: RequestBody { get }
     
     /// 인증 필요 여부
     var requiresAuth: Bool { get }
@@ -45,7 +45,7 @@ public protocol APIRequest {
 public extension APIRequest {
     var headers: HTTPHeaders? { return nil }
     var queryParameters: [String: String]? { return nil }
-    var bodyParameters: Encodable? { return nil }
+    var requestBody: RequestBody { return .none }
     var requiresAuth: Bool { return true }
     var cachePolicyForURLRequest: URLRequest.CachePolicy { return .useProtocolCachePolicy }
     var timeoutInterval: TimeInterval { return 30.0 }

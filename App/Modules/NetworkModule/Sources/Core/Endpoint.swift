@@ -1,5 +1,12 @@
 import Foundation
 
+/// 요청 본문 타입 열거형
+public enum RequestBody {
+    case encodable(Encodable)
+    case dictionary([String: Any])
+    case none
+}
+
 /// 공용 API 엔드포인트 정의
 /// 이전의 APIEndpoint와 통합된 구현입니다.
 public struct Endpoint<Response: Decodable>: APIRequest {
@@ -9,19 +16,18 @@ public struct Endpoint<Response: Decodable>: APIRequest {
     public let method: HTTPMethod
     public let headers: HTTPHeaders?
     public let queryParameters: [String: String]?
-    public let bodyParameters: Encodable?
-    public let bodyDict: [String: Any]?
+    public let requestBody: RequestBody
     public let requiresAuth: Bool
     public let cachePolicyForURLRequest: URLRequest.CachePolicy
     public let timeoutInterval: TimeInterval
     
-    /// Endpoint 생성자 (Encodable 파라미터)
+    /// Endpoint 생성자
     public init(
         path: String,
         method: HTTPMethod = .GET,
         headers: HTTPHeaders? = nil,
         queryParameters: [String: String]? = nil,
-        bodyParameters: Encodable? = nil,
+        requestBody: RequestBody = .none,
         requiresAuth: Bool = true,
         cachePolicyForURLRequest: URLRequest.CachePolicy = .useProtocolCachePolicy,
         timeoutInterval: TimeInterval = 30.0
@@ -30,33 +36,56 @@ public struct Endpoint<Response: Decodable>: APIRequest {
         self.method = method
         self.headers = headers
         self.queryParameters = queryParameters
-        self.bodyParameters = bodyParameters
-        self.bodyDict = nil
+        self.requestBody = requestBody
         self.requiresAuth = requiresAuth
         self.cachePolicyForURLRequest = cachePolicyForURLRequest
         self.timeoutInterval = timeoutInterval
     }
     
-    /// Endpoint 생성자 (Dictionary 파라미터)
+    /// 편의 초기화 메서드 (Encodable 파라미터)
     public init(
         path: String,
         method: HTTPMethod = .GET,
         headers: HTTPHeaders? = nil,
         queryParameters: [String: String]? = nil,
-        bodyDict: [String: Any]? = nil,
+        bodyParameters: Encodable,
         requiresAuth: Bool = true,
         cachePolicyForURLRequest: URLRequest.CachePolicy = .useProtocolCachePolicy,
         timeoutInterval: TimeInterval = 30.0
     ) {
-        self.path = path
-        self.method = method
-        self.headers = headers
-        self.queryParameters = queryParameters
-        self.bodyParameters = nil
-        self.bodyDict = bodyDict
-        self.requiresAuth = requiresAuth
-        self.cachePolicyForURLRequest = cachePolicyForURLRequest
-        self.timeoutInterval = timeoutInterval
+        self.init(
+            path: path,
+            method: method,
+            headers: headers,
+            queryParameters: queryParameters,
+            requestBody: .encodable(bodyParameters),
+            requiresAuth: requiresAuth,
+            cachePolicyForURLRequest: cachePolicyForURLRequest,
+            timeoutInterval: timeoutInterval
+        )
+    }
+    
+    /// 편의 초기화 메서드 (Dictionary 파라미터)
+    public init(
+        path: String,
+        method: HTTPMethod = .GET,
+        headers: HTTPHeaders? = nil,
+        queryParameters: [String: String]? = nil,
+        bodyDict: [String: Any],
+        requiresAuth: Bool = true,
+        cachePolicyForURLRequest: URLRequest.CachePolicy = .useProtocolCachePolicy,
+        timeoutInterval: TimeInterval = 30.0
+    ) {
+        self.init(
+            path: path,
+            method: method,
+            headers: headers,
+            queryParameters: queryParameters,
+            requestBody: .dictionary(bodyDict),
+            requiresAuth: requiresAuth,
+            cachePolicyForURLRequest: cachePolicyForURLRequest,
+            timeoutInterval: timeoutInterval
+        )
     }
     
     /// URL 요청으로 변환
@@ -91,20 +120,23 @@ public struct Endpoint<Response: Decodable>: APIRequest {
         }
         
         // 바디 파라미터 설정
-        if let bodyParameters = bodyParameters {
+        switch requestBody {
+        case .encodable(let encodable):
             do {
-                let data = try JSONEncoder().encode(bodyParameters)
+                let data = try JSONEncoder().encode(encodable)
                 request.httpBody = data
             } catch {
                 throw NetworkError.invalidURL
             }
-        } else if let bodyDict = bodyDict {
+        case .dictionary(let dict):
             do {
-                let data = try JSONSerialization.data(withJSONObject: bodyDict)
+                let data = try JSONSerialization.data(withJSONObject: dict)
                 request.httpBody = data
             } catch {
                 throw NetworkError.invalidURL
             }
+        case .none:
+            break
         }
         
         return request
@@ -117,29 +149,27 @@ public extension Endpoint {
     func path(_ path: String) -> Endpoint<Response> {
         Endpoint<Response>(
             path: path,
-            method: self.method,
-            headers: self.headers,
-            queryParameters: self.queryParameters,
-            bodyParameters: self.bodyParameters,
-            bodyDict: self.bodyDict,
-            requiresAuth: self.requiresAuth,
-            cachePolicyForURLRequest: self.cachePolicyForURLRequest,
-            timeoutInterval: self.timeoutInterval
+            method: method,
+            headers: headers,
+            queryParameters: queryParameters,
+            requestBody: requestBody,
+            requiresAuth: requiresAuth,
+            cachePolicyForURLRequest: cachePolicyForURLRequest,
+            timeoutInterval: timeoutInterval
         )
     }
     
     /// 새로운 HTTP 메서드로 Endpoint 생성
     func method(_ method: HTTPMethod) -> Endpoint<Response> {
         Endpoint<Response>(
-            path: self.path,
+            path: path,
             method: method,
-            headers: self.headers,
-            queryParameters: self.queryParameters,
-            bodyParameters: self.bodyParameters,
-            bodyDict: self.bodyDict,
-            requiresAuth: self.requiresAuth,
-            cachePolicyForURLRequest: self.cachePolicyForURLRequest,
-            timeoutInterval: self.timeoutInterval
+            headers: headers,
+            queryParameters: queryParameters,
+            requestBody: requestBody,
+            requiresAuth: requiresAuth,
+            cachePolicyForURLRequest: cachePolicyForURLRequest,
+            timeoutInterval: timeoutInterval
         )
     }
     
@@ -149,15 +179,14 @@ public extension Endpoint {
         additionalHeaders.forEach { newHeaders[$0.key] = $0.value }
         
         return Endpoint<Response>(
-            path: self.path,
-            method: self.method,
+            path: path,
+            method: method,
             headers: newHeaders,
-            queryParameters: self.queryParameters,
-            bodyParameters: self.bodyParameters,
-            bodyDict: self.bodyDict,
-            requiresAuth: self.requiresAuth,
-            cachePolicyForURLRequest: self.cachePolicyForURLRequest,
-            timeoutInterval: self.timeoutInterval
+            queryParameters: queryParameters,
+            requestBody: requestBody,
+            requiresAuth: requiresAuth,
+            cachePolicyForURLRequest: cachePolicyForURLRequest,
+            timeoutInterval: timeoutInterval
         )
     }
     
@@ -167,89 +196,79 @@ public extension Endpoint {
         additionalParameters.forEach { newParameters[$0.key] = $0.value }
         
         return Endpoint<Response>(
-            path: self.path,
-            method: self.method,
-            headers: self.headers,
+            path: path,
+            method: method,
+            headers: headers,
             queryParameters: newParameters,
-            bodyParameters: self.bodyParameters,
-            bodyDict: self.bodyDict,
-            requiresAuth: self.requiresAuth,
-            cachePolicyForURLRequest: self.cachePolicyForURLRequest,
-            timeoutInterval: self.timeoutInterval
+            requestBody: requestBody,
+            requiresAuth: requiresAuth,
+            cachePolicyForURLRequest: cachePolicyForURLRequest,
+            timeoutInterval: timeoutInterval
+        )
+    }
+    
+    /// 요청 본문 설정하여 새 Endpoint 생성
+    func requestBody(_ body: RequestBody) -> Endpoint<Response> {
+        return Endpoint<Response>(
+            path: path,
+            method: method,
+            headers: headers,
+            queryParameters: queryParameters,
+            requestBody: body,
+            requiresAuth: requiresAuth,
+            cachePolicyForURLRequest: cachePolicyForURLRequest,
+            timeoutInterval: timeoutInterval
         )
     }
     
     /// 바디 파라미터 설정하여 새 Endpoint 생성 (Encodable)
     func body(_ parameters: Encodable) -> Endpoint<Response> {
-        return Endpoint<Response>(
-            path: self.path,
-            method: self.method,
-            headers: self.headers,
-            queryParameters: self.queryParameters,
-            bodyParameters: parameters,
-            bodyDict: nil,
-            requiresAuth: self.requiresAuth,
-            cachePolicyForURLRequest: self.cachePolicyForURLRequest,
-            timeoutInterval: self.timeoutInterval
-        )
+        return requestBody(.encodable(parameters))
     }
     
     /// 바디 파라미터 설정하여 새 Endpoint 생성 (Dictionary)
     func bodyDict(_ parameters: [String: Any]) -> Endpoint<Response> {
-        return Endpoint<Response>(
-            path: self.path,
-            method: self.method,
-            headers: self.headers,
-            queryParameters: self.queryParameters,
-            bodyParameters: nil,
-            bodyDict: parameters,
-            requiresAuth: self.requiresAuth,
-            cachePolicyForURLRequest: self.cachePolicyForURLRequest,
-            timeoutInterval: self.timeoutInterval
-        )
+        return requestBody(.dictionary(parameters))
     }
     
     /// 인증 요구 설정하여 새 Endpoint 생성 
     func requiresAuth(_ requires: Bool) -> Endpoint<Response> {
         return Endpoint<Response>(
-            path: self.path,
-            method: self.method,
-            headers: self.headers,
-            queryParameters: self.queryParameters,
-            bodyParameters: self.bodyParameters,
-            bodyDict: self.bodyDict,
+            path: path,
+            method: method,
+            headers: headers,
+            queryParameters: queryParameters,
+            requestBody: requestBody,
             requiresAuth: requires,
-            cachePolicyForURLRequest: self.cachePolicyForURLRequest,
-            timeoutInterval: self.timeoutInterval
+            cachePolicyForURLRequest: cachePolicyForURLRequest,
+            timeoutInterval: timeoutInterval
         )
     }
     
     /// 캐시 정책 설정하여 새 Endpoint 생성
     func cachePolicy(_ policy: URLRequest.CachePolicy) -> Endpoint<Response> {
         return Endpoint<Response>(
-            path: self.path,
-            method: self.method,
-            headers: self.headers,
-            queryParameters: self.queryParameters,
-            bodyParameters: self.bodyParameters,
-            bodyDict: self.bodyDict,
-            requiresAuth: self.requiresAuth,
+            path: path,
+            method: method,
+            headers: headers,
+            queryParameters: queryParameters,
+            requestBody: requestBody,
+            requiresAuth: requiresAuth,
             cachePolicyForURLRequest: policy,
-            timeoutInterval: self.timeoutInterval
+            timeoutInterval: timeoutInterval
         )
     }
     
     /// 타임아웃 설정하여 새 Endpoint 생성
     func timeout(_ interval: TimeInterval) -> Endpoint<Response> {
         return Endpoint<Response>(
-            path: self.path,
-            method: self.method,
-            headers: self.headers,
-            queryParameters: self.queryParameters,
-            bodyParameters: self.bodyParameters,
-            bodyDict: self.bodyDict,
-            requiresAuth: self.requiresAuth,
-            cachePolicyForURLRequest: self.cachePolicyForURLRequest,
+            path: path,
+            method: method,
+            headers: headers,
+            queryParameters: queryParameters,
+            requestBody: requestBody,
+            requiresAuth: requiresAuth,
+            cachePolicyForURLRequest: cachePolicyForURLRequest,
             timeoutInterval: interval
         )
     }
