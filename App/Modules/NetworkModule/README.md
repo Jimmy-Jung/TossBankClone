@@ -70,9 +70,16 @@ classDiagram
         +method: HTTPMethod
         +headers: [String: String]?
         +queryParameters: [String: String]?
-        +bodyParameters: Encodable?
+        +requestBody: RequestBody
         +requiresAuth: Bool
         +asURLRequest(baseURL) URLRequest
+    }
+    
+    class RequestBody {
+        <<enumeration>>
+        +encodable(Encodable)
+        +dictionary([String: Any])
+        +none
     }
     
     class NetworkError {
@@ -92,11 +99,25 @@ classDiagram
         +isConnected: Bool
     }
     
+    class Logger {
+        <<interface>>
+        +logRequest(URLRequest)
+        +logResponse(HTTPURLResponse, Data)
+    }
+    
+    class ConsoleLogger {
+        -logLevel: LogLevel
+        +init(logLevel)
+        +logRequest(URLRequest)
+        +logResponse(HTTPURLResponse, Data)
+    }
+    
     NetworkServiceProtocol <|.. NetworkService
     NetworkService --> Endpoint : uses
     NetworkService --> NetworkPlugin : uses
     NetworkService --> NetworkReachability : uses
     NetworkService --> NetworkError : throws
+    Endpoint --> RequestBody : uses
     
     NetworkPlugin <|.. AuthPlugin
     NetworkPlugin <|.. ConnectivityPlugin
@@ -104,6 +125,9 @@ classDiagram
     NetworkPlugin <|.. LoggingPlugin
     NetworkPlugin <|.. CachePlugin
     NetworkPlugin <|.. TimeoutPlugin
+    
+    Logger <|.. ConsoleLogger
+    LoggingPlugin --> Logger : uses
     
     ConnectivityPlugin --> NetworkReachability : uses
 ```
@@ -116,6 +140,7 @@ graph TD
     A --> C[NetworkPlugin]
     A --> D[NetworkReachability]
     A --> E[NetworkError]
+    B --> L[RequestBody]
     
     C --> F[AuthPlugin]
     C --> G[ConnectivityPlugin]
@@ -124,10 +149,14 @@ graph TD
     C --> J[CachePlugin]
     C --> K[TimeoutPlugin]
     
+    I --> M[Logger]
+    M --> N[ConsoleLogger]
+    
     G --> D
     
     subgraph Core
         B
+        L
     end
     
     subgraph Plugins
@@ -138,6 +167,11 @@ graph TD
         I
         J
         K
+    end
+    
+    subgraph Logging
+        M
+        N
     end
     
     subgraph Errors
@@ -179,8 +213,21 @@ do {
 ### 플러그인 추가
 
 ```swift
-// 로깅 플러그인 추가
-let loggingPlugin = LoggingPlugin()
+// 로깅 플러그인 추가 (기본 ConsoleLogger 사용)
+let loggingPlugin = LoggingPlugin(logLevel: .body)
+
+// 커스텀 로거를 사용한 로깅 플러그인
+class MyCustomLogger: Logger {
+    func logRequest(_ request: URLRequest) {
+        print("🚀 Request: \(request.url?.absoluteString ?? "")")
+    }
+    
+    func logResponse(_ response: HTTPURLResponse, data: Data) {
+        print("📥 Response: \(response.statusCode)")
+    }
+}
+
+let customLoggingPlugin = LoggingPlugin(logLevel: .body, logger: MyCustomLogger())
 
 // 재시도 플러그인 추가 (최대 3회 재시도, 지수 백오프 적용)
 let retryPlugin = RetryPlugin()
@@ -192,7 +239,7 @@ let authTokenProvider = { return KeychainService.getToken() }
 let networkService = NetworkService(
     baseURL: baseURL,
     authTokenProvider: authTokenProvider,
-    plugins: [loggingPlugin, retryPlugin]
+    plugins: [customLoggingPlugin, retryPlugin]
 )
 ```
 
@@ -224,12 +271,12 @@ do {
 // 메서드 체이닝을 통한 엔드포인트 설정
 let searchEndpoint = Endpoint<SearchResults>(path: "/search")
     .method(.get)
-    .queryParameters([
+    .addQueryParameters([
         "q": "Swift",
         "page": "1",
         "limit": "20"
     ])
-    .headers([
+    .addHeaders([
         "X-API-Key": "your-api-key"
     ])
     .timeout(60.0)
@@ -285,6 +332,49 @@ let networkService = NetworkService(
     baseURL: baseURL,
     plugins: [MyCustomPlugin()]
 )
+```
+
+## 커스텀 로거 만들기
+
+Logger 프로토콜을 구현하여 자신만의 로거를 만들 수 있습니다:
+
+```swift
+class FileLogger: Logger {
+    private let fileURL: URL
+    
+    init(fileURL: URL) {
+        self.fileURL = fileURL
+    }
+    
+    func logRequest(_ request: URLRequest) {
+        let logMessage = "Request: \(request.httpMethod ?? "GET") \(request.url?.absoluteString ?? "")\n"
+        appendToLogFile(logMessage)
+    }
+    
+    func logResponse(_ response: HTTPURLResponse, data: Data) {
+        let logMessage = "Response: \(response.statusCode) \(response.url?.absoluteString ?? "")\n"
+        appendToLogFile(logMessage)
+    }
+    
+    private func appendToLogFile(_ message: String) {
+        if let data = message.data(using: .utf8) {
+            if FileManager.default.fileExists(atPath: fileURL.path) {
+                if let fileHandle = try? FileHandle(forWritingTo: fileURL) {
+                    fileHandle.seekToEndOfFile()
+                    fileHandle.write(data)
+                    fileHandle.closeFile()
+                }
+            } else {
+                try? data.write(to: fileURL)
+            }
+        }
+    }
+}
+
+// 파일 로거 사용
+let logFileURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!.appendingPathComponent("network.log")
+let fileLogger = FileLogger(fileURL: logFileURL)
+let loggingPlugin = LoggingPlugin(logLevel: .body, logger: fileLogger)
 ```
 
 ## 테스트
