@@ -160,19 +160,19 @@ private struct TestModel: Decodable {
 }
 
 // MARK: - 모의 URLSession
-private class MockURLSession: URLSession {
+private class MockURLSession: URLSessionProtocol {
     var nextData: Data = Data()
     var nextResponse: URLResponse = URLResponse()
     var nextError: Error?
     
-    override func data(for request: URLRequest) async throws -> (Data, URLResponse) {
+     func data(for request: URLRequest) async throws -> (Data, URLResponse) {
         if let error = nextError {
             throw error
         }
         return (nextData, nextResponse)
     }
     
-    override func upload(for request: URLRequest, from bodyData: Data) async throws -> (Data, URLResponse) {
+     func upload(for request: URLRequest, from bodyData: Data) async throws -> (Data, URLResponse) {
         if let error = nextError {
             throw error
         }
@@ -182,6 +182,7 @@ private class MockURLSession: URLSession {
 
 // MARK: - 모의 네트워크 연결 상태
 private class MockNetworkReachability: NetworkReachability {
+    var didChangeStatus: ((Bool) -> Void)?
     var isConnected: Bool = true
 }
 

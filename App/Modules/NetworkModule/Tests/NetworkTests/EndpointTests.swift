@@ -35,10 +35,10 @@ class EndpointTests: XCTestCase {
     // MARK: - HTTP 메서드 테스트
     func testHTTPMethodConfiguration() throws {
         // Given
-        let getEndpoint = Endpoint<TestModel>(path: "/users", method: .get)
-        let postEndpoint = Endpoint<TestModel>(path: "/users", method: .post)
-        let putEndpoint = Endpoint<TestModel>(path: "/users/1", method: .put)
-        let deleteEndpoint = Endpoint<TestModel>(path: "/users/1", method: .delete)
+        let getEndpoint = Endpoint<TestModel>(path: "/users", method: .GET)
+        let postEndpoint = Endpoint<TestModel>(path: "/users", method: .POST)
+        let putEndpoint = Endpoint<TestModel>(path: "/users/1", method: .PUT)
+        let deleteEndpoint = Endpoint<TestModel>(path: "/users/1", method: .DELETE)
         
         // When
         let getRequest = try getEndpoint.asURLRequest(baseURL: baseURL)
@@ -102,16 +102,75 @@ class EndpointTests: XCTestCase {
         XCTAssertEqual(request.value(forHTTPHeaderField: "Accept"), "application/json")
     }
     
-    // MARK: - 바디 파라미터 테스트
-    func testBodyParameters() throws {
+    // MARK: - RequestBody 테스트
+    func testRequestBodyEncodable() throws {
         // Given
-        struct UserData: Encodable {
+        struct UserData: Codable {
             let name: String
             let email: String
         }
         
         let userData = UserData(name: "테스트 사용자", email: "test@example.com")
-        let endpoint = Endpoint<TestModel>(path: "/users", method: .post)
+        let endpoint = Endpoint<TestModel>(
+            path: "/users", 
+            method: .POST,
+            requestBody: .encodable(userData)
+        )
+        
+        // When
+        let request = try endpoint.asURLRequest(baseURL: baseURL)
+        
+        // Then
+        XCTAssertNotNil(request.httpBody)
+        
+        // 바디 데이터 디코딩하여 검증
+        if let httpBody = request.httpBody {
+            let decodedData = try JSONDecoder().decode(UserData.self, from: httpBody)
+            XCTAssertEqual(decodedData.name, "테스트 사용자")
+            XCTAssertEqual(decodedData.email, "test@example.com")
+        } else {
+            XCTFail("HTTP 바디가 없습니다")
+        }
+    }
+    
+    func testRequestBodyDictionary() throws {
+        // Given
+        let bodyDict: [String: Any] = [
+            "name": "테스트 사용자",
+            "email": "test@example.com"
+        ]
+        
+        let endpoint = Endpoint<TestModel>(
+            path: "/users",
+            method: .POST,
+            requestBody: .dictionary(bodyDict)
+        )
+        
+        // When
+        let request = try endpoint.asURLRequest(baseURL: baseURL)
+        
+        // Then
+        XCTAssertNotNil(request.httpBody)
+        
+        // 바디 데이터 추출하여 검증
+        if let httpBody = request.httpBody, 
+           let jsonDict = try? JSONSerialization.jsonObject(with: httpBody) as? [String: Any] {
+            XCTAssertEqual(jsonDict["name"] as? String, "테스트 사용자")
+            XCTAssertEqual(jsonDict["email"] as? String, "test@example.com")
+        } else {
+            XCTFail("HTTP 바디를 JSON으로 파싱할 수 없습니다")
+        }
+    }
+    
+    func testBodyBuilder() throws {
+        // Given
+        struct UserData: Codable {
+            let name: String
+            let email: String
+        }
+        
+        let userData = UserData(name: "테스트 사용자", email: "test@example.com")
+        let endpoint = Endpoint<TestModel>(path: "/users", method: .POST)
             .body(userData)
         
         // When
@@ -125,6 +184,58 @@ class EndpointTests: XCTestCase {
             let decodedData = try JSONDecoder().decode(UserData.self, from: httpBody)
             XCTAssertEqual(decodedData.name, "테스트 사용자")
             XCTAssertEqual(decodedData.email, "test@example.com")
+        } else {
+            XCTFail("HTTP 바디가 없습니다")
+        }
+    }
+    
+    func testBodyDictBuilder() throws {
+        // Given
+        let bodyDict: [String: Any] = [
+            "name": "테스트 사용자",
+            "email": "test@example.com"
+        ]
+        
+        let endpoint = Endpoint<TestModel>(path: "/users", method: .POST)
+            .bodyDict(bodyDict)
+        
+        // When
+        let request = try endpoint.asURLRequest(baseURL: baseURL)
+        
+        // Then
+        XCTAssertNotNil(request.httpBody)
+        
+        // 바디 데이터 추출하여 검증
+        if let httpBody = request.httpBody, 
+           let jsonDict = try? JSONSerialization.jsonObject(with: httpBody) as? [String: Any] {
+            XCTAssertEqual(jsonDict["name"] as? String, "테스트 사용자")
+            XCTAssertEqual(jsonDict["email"] as? String, "test@example.com")
+        } else {
+            XCTFail("HTTP 바디를 JSON으로 파싱할 수 없습니다")
+        }
+    }
+    
+    // MARK: - 테스트 requestBody 통합 메서드
+    func testRequestBodyMethod() throws {
+        // Given
+        struct UserData: Codable {
+            let name: String
+        }
+        
+        let userData = UserData(name: "테스트 사용자")
+        let endpoint = Endpoint<TestModel>(path: "/users", method: .POST)
+            .requestBody(.encodable(userData))
+        
+        // When
+        let request = try endpoint.asURLRequest(baseURL: baseURL)
+        
+        // Then
+        XCTAssertNotNil(request.httpBody)
+        
+        // 바디 데이터 디코딩하여 검증
+        if let httpBody = request.httpBody {
+            let decodedData = try JSONDecoder().decode(UserData.self, from: httpBody)
+            XCTAssertEqual(decodedData.name, "테스트 사용자")
         } else {
             XCTFail("HTTP 바디가 없습니다")
         }
@@ -159,15 +270,15 @@ class EndpointTests: XCTestCase {
     // MARK: - 메서드 체이닝 테스트
     func testMethodChaining() throws {
         // Given
-        struct UserData: Encodable {
+        struct UserData: Codable {
             let name: String
         }
         
         let endpoint = Endpoint<TestModel>(path: "/users")
-            .method(.post)
+            .method(.POST)
             .body(UserData(name: "테스트 사용자"))
-            .headers(["X-API-Key": "test-key"])
-            .queryParameters(["source": "ios"])
+            .addHeaders(["X-API-Key": "test-key"])
+            .addQueryParameters(["source": "ios"])
             .timeout(45.0)
             .cachePolicy(.reloadIgnoringLocalCacheData)
         

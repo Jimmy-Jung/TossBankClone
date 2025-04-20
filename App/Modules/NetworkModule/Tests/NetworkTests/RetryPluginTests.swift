@@ -55,6 +55,8 @@ class RetryPluginTests: XCTestCase {
                     } else {
                         XCTFail("예상된 오류 타입이 아닙니다: \(error)")
                     }
+                } catch {
+                    XCTFail("예상치 못한 오류 타입입니다: \(error)")
                 }
             }
             // 최대 3회까지만 재시도 (구성에 따라)
@@ -157,7 +159,7 @@ class RetryPluginTests: XCTestCase {
         do {
             try await backoffPlugin.process(request, response, data)
             XCTFail("재시도 플러그인이 성공을 반환해서는 안 됩니다")
-        } catch {
+        } catch let error as NetworkError {
             let elapsedTime1 = Date().timeIntervalSince(startTime)
             XCTAssertGreaterThanOrEqual(elapsedTime1, 0.09) // 약간의 오차 허용
             
@@ -165,7 +167,7 @@ class RetryPluginTests: XCTestCase {
             do {
                 try await backoffPlugin.process(request, response, data)
                 XCTFail("재시도 플러그인이 성공을 반환해서는 안 됩니다")
-            } catch {
+            } catch let error as NetworkError {
                 let elapsedTime2 = Date().timeIntervalSince(startTime)
                 XCTAssertGreaterThanOrEqual(elapsedTime2, 0.29) // 첫 번째 지연(0.1) + 두 번째 지연(0.2) = 0.3
                 
@@ -173,11 +175,17 @@ class RetryPluginTests: XCTestCase {
                 do {
                     try await backoffPlugin.process(request, response, data)
                     XCTFail("재시도 플러그인이 성공을 반환해서는 안 됩니다")
-                } catch {
+                } catch let error as NetworkError {
                     let elapsedTime3 = Date().timeIntervalSince(startTime)
                     XCTAssertGreaterThanOrEqual(elapsedTime3, 0.69) // 총 지연 시간 0.1 + 0.2 + 0.4 = 0.7
+                } catch {
+                    XCTFail("예상치 못한 오류 타입입니다: \(error)")
                 }
+            } catch {
+                XCTFail("예상치 못한 오류 타입입니다: \(error)")
             }
+        } catch {
+            XCTFail("예상치 못한 오류 타입입니다: \(error)")
         }
     }
 } 
