@@ -250,7 +250,7 @@ let networkService = NetworkService(
 let imageData = UIImage(named: "profile")?.jpegData(compressionQuality: 0.8) ?? Data()
 
 // 업로드 엔드포인트 정의
-let uploadEndpoint = Endpoint<UploadResponse>(path: "/upload", method: .post)
+let uploadEndpoint = Endpoint<UploadResponse>(path: "/upload", method: .POST)
 
 // 업로드 요청
 do {
@@ -297,7 +297,7 @@ struct CreateUserRequest: Encodable {
 }
 
 // POST 엔드포인트 설정
-let createUserEndpoint = Endpoint<User>(path: "/users", method: .post)
+let createUserEndpoint = Endpoint<User>(path: "/users", method: .POST)
     .body(CreateUserRequest(
         name: "홍길동",
         email: "hong@example.com",
