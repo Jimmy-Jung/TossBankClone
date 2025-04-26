@@ -39,7 +39,8 @@ let project = Project(
                 .target(name: "SharedModule"),
                 .target(name: "AuthFeature"),
                 .target(name: "AccountFeature"),
-                .target(name: "SettingsFeature")
+                .target(name: "SettingsFeature"),
+                .target(name: "TransferFeature")
             ]
         ),
         .target(
@@ -67,6 +68,22 @@ let project = Project(
             infoPlist: .default,
             sources: ["Modules/Features/Account/Sources/**"],
             resources: ["Modules/Features/Account/Resources/**"],
+            dependencies: [
+                .target(name: "DomainModule"),
+                .target(name: "NetworkModule"),
+                .target(name: "DesignSystem"),
+                .target(name: "SharedModule"),
+                .target(name: "CoordinatorModule")
+            ]
+        ),
+        .target(
+            name: "TransferFeature",
+            destinations: .iOS,
+            product: .framework,
+            bundleId: "io.tuist.TossBankClone.transferfeature",
+            infoPlist: .default,
+            sources: ["Modules/Features/Transfer/Sources/**"],
+            resources: ["Modules/Features/Transfer/Resources/**"],
             dependencies: [
                 .target(name: "DomainModule"),
                 .target(name: "NetworkModule"),

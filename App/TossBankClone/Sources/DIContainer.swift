@@ -5,82 +5,68 @@ import DataModule
 import AuthenticationModule
 import NetworkModule
 
-/// 앱 DI 컨테이너 구현
-public final class AppDIContainer: AppDIContainerProtocol {
-    // MARK: - 싱글톤 인스턴스
-    public static let shared = AppDIContainer()
+/// 앱의 DI 컨테이너 구현
+final class AppDIContainer: AppDIContainerProtocol {
     
-    // MARK: - 프로퍼티
-    private let accountRepository: AccountRepositoryProtocol
-    private let authenticationManager: AuthenticationManager
-    private let networkService: NetworkServiceProtocol
-    private let apiClient: APIClient
+    // MARK: - 속성
+    private let authenticationManager: AuthenticationManagerProtocol
     
-    // MARK: - 생성자
-    private init() {
-        // 네트워크 서비스 초기화
-        let baseURL = URL(string: "https://api.tossbank.com")!
-        self.networkService = NetworkService(
-            baseURL: baseURL,
-            authTokenProvider: { UserDefaults.standard.string(forKey: "authToken") }
-        )
-        
-        // API 클라이언트 초기화
-        self.apiClient = NetworkAPIClient(
-            networkService: networkService,
-            baseURL: baseURL
-        )
-        
-        // 인증 관리자 초기화
-        self.authenticationManager = AuthenticationManager.shared
-        self.accountRepository = AccountRepositoryImpl(apiClient: apiClient)
+    // MARK: - 초기화
+    init() {
+        // 인증 관리자 생성
+        authenticationManager = AuthenticationManager()
     }
     
-    // MARK: - DIContainer 팩토리 메서드
-    public func authDIContainer() -> AuthDIContainerProtocol {
+    // MARK: - 하위 컨테이너 팩토리 메서드
+    
+    func authDIContainer() -> AuthDIContainerProtocol {
         return AuthDIContainer(authenticationManager: authenticationManager)
     }
     
-    public func accountDIContainer() -> AccountDIContainerProtocol {
-        return AccountDIContainer(accountRepository: accountRepository)
+    func accountDIContainer() -> AccountDIContainerProtocol {
+        return AccountDIContainer()
     }
     
-    public func transferDIContainer() -> TransferDIContainerProtocol {
-        return TransferDIContainer(accountRepository: accountRepository)
+    func transferDIContainer() -> TransferDIContainerProtocol {
+        return TransferDIContainer()
+    }
+    
+    func settingsDIContainer() -> SettingsDIContainerProtocol {
+        return SettingsDIContainer()
     }
 }
 
-// MARK: - Auth DI Container
+/// 인증 모듈 DI 컨테이너
 final class AuthDIContainer: AuthDIContainerProtocol {
-    private let authenticationManager: AuthenticationManager
+    // MARK: - 속성
+    private let authenticationManager: AuthenticationManagerProtocol
     
-    init(authenticationManager: AuthenticationManager) {
+    // MARK: - 초기화
+    init(authenticationManager: AuthenticationManagerProtocol) {
         self.authenticationManager = authenticationManager
     }
 }
 
-// MARK: - Account DI Container
+/// 계좌 모듈 DI 컨테이너
 final class AccountDIContainer: AccountDIContainerProtocol {
-    private let accountRepository: AccountRepositoryProtocol
-    
-    init(accountRepository: AccountRepositoryProtocol) {
-        self.accountRepository = accountRepository
-    }
-    
-    func makeFetchAccountsUseCase() -> FetchAccountsUseCase {
-        return FetchAccountsUseCase(accountRepository: accountRepository)
+    // MARK: - 초기화
+    init() {
+        // 필요한 의존성 초기화
     }
 }
 
-// MARK: - Transfer DI Container
+/// 송금 모듈 DI 컨테이너
 final class TransferDIContainer: TransferDIContainerProtocol {
-    private let accountRepository: AccountRepositoryProtocol
-    
-    init(accountRepository: AccountRepositoryProtocol) {
-        self.accountRepository = accountRepository
+    // MARK: - 초기화
+    init() {
+        // 필요한 의존성 초기화
     }
-    
-    func makeAddTransactionUseCase() -> AddTransactionUseCase {
-        return AddTransactionUseCase(accountRepository: accountRepository)
+}
+
+/// 설정 모듈 DI 컨테이너
+final class SettingsDIContainer: SettingsDIContainerProtocol {
+    // MARK: - 초기화
+    init() {
+        // 필요한 의존성 초기화
     }
 }

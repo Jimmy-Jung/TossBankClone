@@ -1,6 +1,8 @@
 import Foundation
 import UIKit
 import CoordinatorModule
+import SwiftUI
+import AuthenticationModule
 
 /// 인증 코디네이터 구현
 public final class AuthCoordinator: NSObject, Coordinator {
@@ -16,18 +18,44 @@ public final class AuthCoordinator: NSObject, Coordinator {
     }
     
     public func start() {
-        // TODO: 로그인 화면 표시 구현
         showLogin()
     }
     
     private func showLogin() {
+        // 로그인 뷰모델 생성
+        let authManager = AuthenticationManager.shared
+        let viewModel = LoginViewModel(
+            authenticationManager: authManager,
+            onLoginSuccess: { [weak self] in
+                // 로그인 성공 시 delegate 호출
+                self?.delegate?.authCoordinatorDidFinish()
+            },
+            onRegisterTapped: { [weak self] in
+                // 회원가입 화면으로 이동
+                self?.showRegister()
+            }
+        )
+        
+        // SwiftUI 뷰를 UIKit 호스팅 컨트롤러로 래핑
+        let loginView = LoginView(viewModel: viewModel)
+        let viewController = UIHostingController(rootView: loginView)
+        
+        // 네비게이션 바 숨기기
+        viewController.navigationItem.hidesBackButton = true
+        navigationController.isNavigationBarHidden = true
+        
+        navigationController.viewControllers = [viewController]
+    }
+    
+    private func showRegister() {
+        // 회원가입 화면 구현 (실제 앱에서는 구현 필요)
         let viewController = UIViewController()
         viewController.view.backgroundColor = .white
-        viewController.title = "로그인"
+        viewController.title = "회원가입"
         
         // 임시 텍스트 레이블 추가
         let label = UILabel()
-        label.text = "로그인 화면"
+        label.text = "회원가입 화면"
         label.translatesAutoresizingMaskIntoConstraints = false
         viewController.view.addSubview(label)
         
@@ -36,10 +64,9 @@ public final class AuthCoordinator: NSObject, Coordinator {
             label.centerYAnchor.constraint(equalTo: viewController.view.centerYAnchor)
         ])
         
+        // 네비게이션 바 표시
+        navigationController.isNavigationBarHidden = false
+        
         navigationController.pushViewController(viewController, animated: true)
-    }
-    
-    private func showRegister() {
-        // 회원가입 화면 구현 코드가 추가될 예정
     }
 } 

@@ -2,7 +2,26 @@ import Foundation
 import LocalAuthentication
 import Security
 
-public class AuthenticationManager {
+/// 인증 관리자 프로토콜
+public protocol AuthenticationManagerProtocol: AnyObject {
+    /// 현재 인증 상태 확인
+    var isAuthenticated: Bool { get }
+    
+    /// 로그인 메서드
+    func login(email: String, password: String) async throws -> Bool
+    
+    /// 로그아웃 메서드
+    func logout() async throws
+    
+    /// 인증 토큰 가져오기
+    func getAuthToken() -> String?
+    
+    /// 회원가입 메서드
+    func register(email: String, password: String, name: String) async throws -> Bool
+}
+
+/// 인증 관리자 구현
+public final class AuthenticationManager: AuthenticationManagerProtocol {
     // MARK: - 싱글톤 인스턴스
     public static let shared = AuthenticationManager()
     
@@ -10,7 +29,70 @@ public class AuthenticationManager {
     private let pinKey = "user_pin"
     private let authContext = LAContext()
     
-    private init() {}
+    // MARK: - 속성
+    private let userDefaults = UserDefaults.standard
+    private let tokenKey = "app.auth.token"
+    private let userIdKey = "app.auth.userId"
+    
+    // MARK: - 초기화
+    public init() {}
+    
+    // MARK: - AuthenticationManagerProtocol 구현
+    
+    public var isAuthenticated: Bool {
+        return getAuthToken() != nil
+    }
+    
+    public func login(email: String, password: String) async throws -> Bool {
+        // 실제 구현에서는 API를 호출하여 인증을 수행해야 함
+        // 여기서는 테스트를 위해 간단한 구현만 제공
+        
+        // 테스트 사용자 확인 (실제 구현에서는 서버 응답 사용)
+        if email == "test@test.com" && password == "test" {
+            // 인증 성공 시 토큰 저장
+            let mockToken = "mock_token_\(UUID().uuidString)"
+            let mockUserId = "user_\(Int.random(in: 1000...9999))"
+            
+            userDefaults.set(mockToken, forKey: tokenKey)
+            userDefaults.set(mockUserId, forKey: userIdKey)
+            
+            return true
+        } else {
+            // 인증 실패
+            throw AuthenticationError.invalidCredentials
+        }
+    }
+    
+    public func logout() async throws {
+        // 실제 구현에서는 서버에 로그아웃 요청을 보낼 수 있음
+        
+        // 로컬 토큰 제거
+        userDefaults.removeObject(forKey: tokenKey)
+        userDefaults.removeObject(forKey: userIdKey)
+    }
+    
+    public func getAuthToken() -> String? {
+        return userDefaults.string(forKey: tokenKey)
+    }
+    
+    public func register(email: String, password: String, name: String) async throws -> Bool {
+        // 실제 구현에서는 API를 호출하여 회원가입을 수행해야 함
+        // 여기서는 테스트를 위해 간단한 구현만 제공
+        
+        // 기본 유효성 검사
+        guard email.contains("@"), password.count >= 8, !name.isEmpty else {
+            throw AuthenticationError.invalidInput
+        }
+        
+        // 테스트용 회원가입 성공 응답
+        let mockToken = "mock_token_\(UUID().uuidString)"
+        let mockUserId = "user_\(Int.random(in: 1000...9999))"
+        
+        userDefaults.set(mockToken, forKey: tokenKey)
+        userDefaults.set(mockUserId, forKey: userIdKey)
+        
+        return true
+    }
     
     // MARK: - 생체 인증
     public func authenticateBiometric() async -> Result<Bool, AuthError> {
@@ -144,5 +226,14 @@ public enum AuthError: Error {
     case keychainError(OSStatus)
     case accountLocked
     case unauthorized
+    case unknown
+}
+
+/// 인증 오류 정의
+public enum AuthenticationError: Error {
+    case invalidCredentials
+    case invalidInput
+    case networkError
+    case serverError
     case unknown
 } 

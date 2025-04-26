@@ -5,127 +5,252 @@ import DomainModule
 import AuthFeature
 import AccountFeature
 import SettingsFeature
+import TransferFeature
 
 /// 앱 코디네이터 구현
-public final class AppCoordinator: NSObject, Coordinator {
+final class AppCoordinator: Coordinator {
+    // MARK: - 속성
     private let window: UIWindow
     private let diContainer: AppDIContainerProtocol
+    
     private var childCoordinators: [Coordinator] = []
+    private var isLoggedIn: Bool = false
     
-    public weak var delegate: AppCoordinatorDelegate?
-    
-    public init(window: UIWindow, diContainer: AppDIContainerProtocol) {
+    // MARK: - 초기화
+    init(window: UIWindow, diContainer: AppDIContainerProtocol) {
         self.window = window
         self.diContainer = diContainer
-        super.init()
     }
     
-    public func start() {
-        showMainOrAuth()
+    // MARK: - Coordinator 구현
+    func start() {
+        // 로그인 상태에 따라 적절한 화면 표시
+        checkAuthenticationStatus()
     }
     
-    private func showMainOrAuth() {
-        // TODO: 인증 상태 확인 로직 구현
-        let isAuthenticated = false
-        
-        if isAuthenticated {
+    // MARK: - 인증 상태 확인
+    private func checkAuthenticationStatus() {
+        // 실제 구현에서는 인증 서비스에서 로그인 상태를 가져와야 함
+        // 여기서는 임시로 로그인 상태를 설정
+        if isLoggedIn {
             showMainFlow()
         } else {
             showAuthFlow()
         }
     }
     
+    // MARK: - 화면 흐름 메서드
+    
     private func showAuthFlow() {
+        // 인증 네비게이션 컨트롤러 생성
+        let navigationController = UINavigationController()
+        
+        // 인증 코디네이터 생성 및 설정
         let authCoordinator = AuthCoordinator(
-            navigationController: UINavigationController(),
+            navigationController: navigationController,
             diContainer: diContainer.authDIContainer()
         )
-        
         authCoordinator.delegate = self
-        childCoordinators.append(authCoordinator)
+        
+        // 코디네이터 시작
+        addChildCoordinator(authCoordinator)
         authCoordinator.start()
         
-        window.rootViewController = authCoordinator.navigationController
+        // 화면 표시
+        window.rootViewController = navigationController
         window.makeKeyAndVisible()
     }
     
     private func showMainFlow() {
-        let tabBarCoordinator = MainTabBarCoordinator(
-            tabBarController: UITabBarController(),
-            diContainer: diContainer
+        // 탭 바 컨트롤러 생성
+        let tabBarController = UITabBarController()
+        
+        // 각 탭에 대한 코디네이터 생성 및 설정
+        let controllers = [
+            makeAccountTab(),
+            makeTransferTab()
+        ]
+        
+        tabBarController.viewControllers = controllers
+        tabBarController.selectedIndex = 0
+        
+        // 화면 표시
+        window.rootViewController = tabBarController
+        window.makeKeyAndVisible()
+    }
+    
+    private func makeAccountTab() -> UINavigationController {
+        let navigationController = UINavigationController()
+        let accountCoordinator = AccountCoordinator(
+            navigationController: navigationController,
+            diContainer: diContainer.accountDIContainer()
+        )
+        accountCoordinator.delegate = self
+        
+        // 코디네이터 시작
+        addChildCoordinator(accountCoordinator)
+        accountCoordinator.start()
+        
+        return navigationController
+    }
+    
+    private func makeTransferTab() -> UINavigationController {
+        let navigationController = UINavigationController()
+        
+        // TransferCoordinator는 보통 계좌 화면에서 시작되므로 여기서는 임시 화면 표시
+        let placeholderVC = UIViewController()
+        placeholderVC.view.backgroundColor = .white
+        placeholderVC.title = "빠른 송금"
+        placeholderVC.tabBarItem = UITabBarItem(
+            title: "송금",
+            image: UIImage(systemName: "arrow.right"),
+            selectedImage: UIImage(systemName: "arrow.right.fill")
         )
         
-        childCoordinators.append(tabBarCoordinator)
-        tabBarCoordinator.start()
+        navigationController.viewControllers = [placeholderVC]
+        return navigationController
+    }
+    
+    private func showTransferFlow(fromAccountId: String) {
+        // 송금 화면용 네비게이션 컨트롤러 생성
+        let navigationController = UINavigationController()
         
-        window.rootViewController = tabBarCoordinator.tabBarController
-        window.makeKeyAndVisible()
+        // 송금 코디네이터 생성 및 설정
+        let transferCoordinator = TransferCoordinator(
+            navigationController: navigationController,
+            diContainer: diContainer.transferDIContainer(),
+            sourceAccountId: fromAccountId
+        )
+        
+        transferCoordinator.delegate = self
+        
+        // 코디네이터 시작
+        addChildCoordinator(transferCoordinator)
+        transferCoordinator.start()
+        
+        // 송금할 계좌 ID 정보는 다른 방식으로 전달해야 함
+        // 예: TransferCoordinator에 별도 메서드 추가 필요
+        
+        // 모달로 표시
+        if let rootViewController = window.rootViewController {
+            navigationController.modalPresentationStyle = .fullScreen
+            rootViewController.present(navigationController, animated: true)
+        }
+    }
+    
+    private func showSettingsFlow() {
+        // 설정 화면용 네비게이션 컨트롤러 생성
+        let navigationController = UINavigationController()
+        
+        // 설정 코디네이터 생성 및 설정
+        let settingsCoordinator = SettingsCoordinator(
+            navigationController: navigationController,
+            diContainer: diContainer.settingsDIContainer()
+        )
+        settingsCoordinator.delegate = self
+        
+        // 코디네이터 시작
+        addChildCoordinator(settingsCoordinator)
+        settingsCoordinator.start()
+        
+        // 모달로 표시
+        if let rootViewController = window.rootViewController {
+            navigationController.modalPresentationStyle = .formSheet
+            rootViewController.present(navigationController, animated: true)
+        }
+    }
+    
+    // MARK: - 코디네이터 관리 메서드
+    
+    private func addChildCoordinator(_ coordinator: Coordinator) {
+        childCoordinators.append(coordinator)
+    }
+    
+    private func removeChildCoordinator(_ coordinator: Coordinator) {
+        childCoordinators.removeAll { $0 === coordinator }
     }
 }
 
+// MARK: - AuthCoordinatorDelegate 구현
 extension AppCoordinator: AuthCoordinatorDelegate {
-    public func authCoordinatorDidFinish() {
-        // 로그인 완료 후 메인 화면으로 전환
+    func authCoordinatorDidFinish() {
+        isLoggedIn = true
+        
+        // Auth 코디네이터 참조 제거
+        if let authCoordinator = childCoordinators.first(where: { $0 is AuthCoordinator }) {
+            removeChildCoordinator(authCoordinator)
+        }
+        
+        // 메인 화면으로 전환
         showMainFlow()
     }
 }
 
-/// 메인 탭바 코디네이터 구현
-public final class MainTabBarCoordinator: NSObject, Coordinator {
-    public let tabBarController: UITabBarController
-    private let diContainer: AppDIContainerProtocol
-    private var childCoordinators: [Coordinator] = []
-    
-    public init(tabBarController: UITabBarController, diContainer: AppDIContainerProtocol) {
-        self.tabBarController = tabBarController
-        self.diContainer = diContainer
-        super.init()
+// MARK: - AccountCoordinatorDelegate 구현
+extension AppCoordinator: AccountCoordinatorDelegate {
+    func accountCoordinatorDidRequestTransfer(fromAccountId: String) {
+        showTransferFlow(fromAccountId: fromAccountId)
     }
     
-    public func start() {
-        let homeCoordinator = HomeCoordinator(
-            navigationController: UINavigationController(),
-            diContainer: diContainer.accountDIContainer()
-        )
-        
-        let transferCoordinator = TransferCoordinator(
-            navigationController: UINavigationController(),
-            diContainer: diContainer.transferDIContainer()
-        )
-        
-        let settingsCoordinator = SettingsCoordinator(
-            navigationController: UINavigationController()
-        )
-        
-        childCoordinators = [homeCoordinator, transferCoordinator, settingsCoordinator]
-        
-        homeCoordinator.start()
-        transferCoordinator.start()
-        settingsCoordinator.start()
-        
-        tabBarController.viewControllers = [
-            homeCoordinator.navigationController,
-            transferCoordinator.navigationController,
-            settingsCoordinator.navigationController
-        ]
-        
-        setupTabBarIcons()
+    func accountCoordinatorDidRequestSettings() {
+        showSettingsFlow()
+    }
+}
+
+// MARK: - TransferCoordinatorDelegate 구현
+extension AppCoordinator: TransferCoordinatorDelegate {
+    func transferCoordinatorDidFinish() {
+        // 송금 완료 후 모달 닫기
+        if let rootViewController = window.rootViewController {
+            rootViewController.dismiss(animated: true) { [weak self] in
+                // Transfer 코디네이터 참조 제거
+                if let transferCoordinator = self?.childCoordinators.first(where: { $0 is TransferCoordinator }) {
+                    self?.removeChildCoordinator(transferCoordinator)
+                }
+            }
+        }
     }
     
-    private func setupTabBarIcons() {
-        let homeItem = tabBarController.viewControllers?[0].tabBarItem
-        homeItem?.title = "홈"
-        homeItem?.image = UIImage(systemName: "house")
-        homeItem?.selectedImage = UIImage(systemName: "house.fill")
+    func transferCoordinatorDidCancel() {
+        // 송금 취소 후 모달 닫기
+        if let rootViewController = window.rootViewController {
+            rootViewController.dismiss(animated: true) { [weak self] in
+                // Transfer 코디네이터 참조 제거
+                if let transferCoordinator = self?.childCoordinators.first(where: { $0 is TransferCoordinator }) {
+                    self?.removeChildCoordinator(transferCoordinator)
+                }
+            }
+        }
+    }
+}
+
+// MARK: - SettingsCoordinatorDelegate 구현
+extension AppCoordinator: SettingsCoordinatorDelegate {
+    func settingsCoordinatorDidFinish() {
+        // 설정 화면 닫기
+        if let rootViewController = window.rootViewController {
+            rootViewController.dismiss(animated: true) { [weak self] in
+                // Settings 코디네이터 참조 제거
+                if let settingsCoordinator = self?.childCoordinators.first(where: { $0 is SettingsCoordinator }) {
+                    self?.removeChildCoordinator(settingsCoordinator)
+                }
+            }
+        }
+    }
+    
+    func settingsCoordinatorDidRequestLogout() {
+        // 로그아웃 처리
+        isLoggedIn = false
         
-        let transferItem = tabBarController.viewControllers?[1].tabBarItem
-        transferItem?.title = "송금"
-        transferItem?.image = UIImage(systemName: "arrow.left.arrow.right")
-        transferItem?.selectedImage = UIImage(systemName: "arrow.left.arrow.right.circle.fill")
-        
-        let settingsItem = tabBarController.viewControllers?[2].tabBarItem
-        settingsItem?.title = "설정"
-        settingsItem?.image = UIImage(systemName: "gearshape")
-        settingsItem?.selectedImage = UIImage(systemName: "gearshape.fill")
+        // 설정 화면 닫기
+        if let rootViewController = window.rootViewController {
+            rootViewController.dismiss(animated: true) { [weak self] in
+                // 모든 코디네이터 참조 제거
+                self?.childCoordinators.removeAll()
+                
+                // 로그인 화면으로 전환
+                self?.showAuthFlow()
+            }
+        }
     }
 } 

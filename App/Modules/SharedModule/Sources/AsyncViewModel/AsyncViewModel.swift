@@ -16,13 +16,15 @@ import Foundation
 public protocol AsyncViewModel: ObservableObject {
     associatedtype Input
     associatedtype Action
+
+    /// 입력 이벤트를 전송하여 처리를 시작합니다.
+    /// - Parameter input: 처리할 입력 이벤트
+    func send(_ input: Input)
     
     /// 입력을 액션으로 변환합니다.
     /// - Parameter input: 변환할 입력 이벤트
     /// - Returns: 수행할 액션 배열
-    /// - Note: nonisolated로 표시되어 메인 스레드가 아닌 백그라운드 스레드에서 실행될 수 있습니다.
-    ///         이는 성능 최적화를 위한 것으로, UI를 직접 업데이트하지 않는 순수 변환 작업이기 때문입니다.
-    nonisolated func transform(_ input: Input) async -> [Action]
+     func transform(_ input: Input) async -> [Action]
     
     /// 액션을 수행하여 ViewModel의 상태를 업데이트합니다.
     /// - Parameter action: 수행할 액션
@@ -36,10 +38,10 @@ public protocol AsyncViewModel: ObservableObject {
     func handleError(_ error: Error) async
 }
 
-extension AsyncViewModel {
+public extension AsyncViewModel {
     /// 입력을 처리하는 기본 메서드
     /// - Parameter input: 처리할 입력 이벤트
-    public func send(_ input: Input) {
+    func send(_ input: Input) {
         Task { [weak self] in
             guard let self = self else { return }
             
@@ -62,4 +64,4 @@ extension AsyncViewModel {
     func handleError(_ error: Error) async {
         print("AsyncViewModel error: \(error.localizedDescription)")
     }
-} 
+}
