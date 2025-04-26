@@ -10,20 +10,20 @@ struct TransferRequest: APIRequest {
     let amount: Decimal
     let description: String?
     
-    var path: String { "/transfer" }
-    var method: HTTPMethod { .post }
+    var path: String { return "/api/transfer" }
+    var method: HTTPMethod { return .post }
     var requestBody: RequestBody {
-        var parameters: [String: Any] = [
+        var body: [String: Any] = [
             "fromAccountId": fromAccountId,
             "toAccountNumber": toAccountNumber,
             "amount": amount
         ]
         
         if let description = description {
-            parameters["description"] = description
+            body["description"] = description
         }
         
-        return .dictionary(parameters)
+        return .dictionary(body)
     }
 }
 
@@ -35,22 +35,22 @@ struct TransferHistoryRequest: APIRequest {
     let limit: Int
     let offset: Int
     
-    var path: String { "/accounts/\(accountId)/transfers" }
-    var method: HTTPMethod { .get }
+    var path: String { return "/api/transfers/\(accountId)" }
+    var method: HTTPMethod { return .get }
     var queryParameters: [String: String]? {
-        [
-            "limit": "\(limit)",
-            "offset": "\(offset)"
+        return [
+            "limit": String(limit),
+            "offset": String(offset)
         ]
     }
 }
 
-/// 자주 쓰는 계좌 조회 요청
+/// 자주 쓰는 계좌 목록 요청
 struct FrequentAccountsRequest: APIRequest {
     typealias Response = [FrequentAccountDTO]
     
-    var path: String { "/frequent-accounts" }
-    var method: HTTPMethod { .get }
+    var path: String { return "/api/frequent-accounts" }
+    var method: HTTPMethod { return .get }
 }
 
 /// 자주 쓰는 계좌 추가 요청
@@ -62,20 +62,20 @@ struct AddFrequentAccountRequest: APIRequest {
     let holderName: String
     let nickname: String?
     
-    var path: String { "/frequent-accounts" }
-    var method: HTTPMethod { .post }
+    var path: String { return "/api/frequent-accounts" }
+    var method: HTTPMethod { return .post }
     var requestBody: RequestBody {
-        var parameters: [String: Any] = [
+        var body: [String: Any] = [
             "bankName": bankName,
             "accountNumber": accountNumber,
             "holderName": holderName
         ]
         
         if let nickname = nickname {
-            parameters["nickname"] = nickname
+            body["nickname"] = nickname
         }
         
-        return .dictionary(parameters)
+        return .dictionary(body)
     }
 }
 
@@ -85,9 +85,58 @@ struct RemoveFrequentAccountRequest: APIRequest {
     
     let id: String
     
-    var path: String { "/frequent-accounts/\(id)" }
-    var method: HTTPMethod { .delete }
+    var path: String { return "/api/frequent-accounts/\(id)" }
+    var method: HTTPMethod { return .delete }
 }
 
-/// 빈 응답 타입
-struct EmptyResponse: Decodable {} 
+/// 자주 쓰는 계좌 업데이트 요청
+struct UpdateFrequentAccountRequest: APIRequest {
+    typealias Response = FrequentAccountDTO
+    
+    let id: String
+    let bankName: String?
+    let accountNumber: String?
+    let holderName: String?
+    let nickname: String?
+    
+    var path: String { return "/api/frequent-accounts/\(id)" }
+    var method: HTTPMethod { return .put }
+    var requestBody: RequestBody {
+        var body: [String: Any] = [:]
+        
+        if let bankName = bankName {
+            body["bankName"] = bankName
+        }
+        
+        if let accountNumber = accountNumber {
+            body["accountNumber"] = accountNumber
+        }
+        
+        if let holderName = holderName {
+            body["holderName"] = holderName
+        }
+        
+        // nickname이 nil이면 삭제된 것으로 처리
+        body["nickname"] = nickname
+        
+        return .dictionary(body)
+    }
+}
+
+/// 계좌 확인 요청
+struct VerifyAccountRequest: APIRequest {
+    typealias Response = VerifyAccountResponseDTO
+    
+    let accountNumber: String
+    let bankCode: String?
+    
+    var path: String { return "/api/accounts/verify" }
+    var method: HTTPMethod { return .get }
+    var queryParameters: [String: String]? {
+        var params: [String: String] = ["accountNumber": accountNumber]
+        if let bankCode = bankCode {
+            params["bankCode"] = bankCode
+        }
+        return params
+    }
+}

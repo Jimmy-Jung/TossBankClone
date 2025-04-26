@@ -4,7 +4,7 @@ import Foundation
 public struct AccountEntity {
     public let id: String
     public var name: String
-    public var type: AccountTypeEntity
+    public var type: AccountType
     public var balance: Decimal
     public var number: String
     public var isActive: Bool
@@ -14,7 +14,7 @@ public struct AccountEntity {
     public init(
         id: String,
         name: String,
-        type: AccountTypeEntity,
+        type: AccountType,
         balance: Decimal,
         number: String,
         isActive: Bool,
@@ -32,18 +32,19 @@ public struct AccountEntity {
     }
 }
 
-public enum AccountTypeEntity: String, Codable {
+public enum AccountType: String, Codable {
     case checking = "CHECKING"
     case savings = "SAVINGS"
     case investment = "INVESTMENT"
     case loan = "LOAN"
+    case unknown = "UNKNOWN"
 }
 
 // MARK: - Transaction 관련 엔티티
 public struct TransactionEntity {
     public let id: String
     public let amount: Decimal
-    public let type: TransactionTypeEntity
+    public let type: TransactionType
     public let description: String
     public let category: TransactionCategoryEntity
     public let date: Date
@@ -53,7 +54,7 @@ public struct TransactionEntity {
     public init(
         id: String,
         amount: Decimal,
-        type: TransactionTypeEntity,
+        type: TransactionType,
         description: String,
         category: TransactionCategoryEntity,
         date: Date,
@@ -71,12 +72,13 @@ public struct TransactionEntity {
     }
 }
 
-public enum TransactionTypeEntity: String, Codable {
+public enum TransactionType: String, Codable {
     case deposit = "DEPOSIT"
     case withdrawal = "WITHDRAWAL"
     case transfer = "TRANSFER"
     case payment = "PAYMENT"
     case fee = "FEE"
+    case unknown = "UNKNOWN"
 }
 
 public enum TransactionCategoryEntity: String, Codable {

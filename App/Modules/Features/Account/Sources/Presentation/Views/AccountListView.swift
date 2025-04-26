@@ -29,9 +29,7 @@ struct AccountListView: View {
                 List(viewModel.accounts, id: \.id) { account in
                     AccountRow(account: account)
                         .onTapGesture {
-                            Task {
-                                await viewModel.send(.selectAccount(id: account.id))
-                            }
+                                 viewModel.send(.selectAccount(id: account.id))
                         }
                 }
                 .listStyle(.plain)

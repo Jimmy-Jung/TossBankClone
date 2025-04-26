@@ -47,5 +47,8 @@ public enum TransferError: Error {
     case transferLimitExceeded
     case dailyLimitExceeded
     case networkError
+    case accountNotFound
+    case unauthorized
+    case serverError
     case unknown
 } 

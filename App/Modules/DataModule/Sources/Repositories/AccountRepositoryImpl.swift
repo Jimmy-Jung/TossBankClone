@@ -6,260 +6,340 @@ import NetworkModule
 public class AccountRepositoryImpl: AccountRepositoryProtocol {
     // 인메모리 저장소
     private var accounts: [AccountEntity] = []
-    private let onlineRepository: OnlineAccountRepository?
-    private let connectivityChecker: NetworkReachability
+    private let apiClient: APIClient?
     
+    // MARK: - 생성자
+    
+    /// 오프라인 전용 리포지토리 초기화
     public init() {
-        self.onlineRepository = nil
-        self.connectivityChecker = NetworkReachabilityImpl.shared
+        self.apiClient = nil
     }
     
-    public init(apiClient: APIClient, connectivityChecker: NetworkReachability = NetworkReachabilityImpl.shared) {
-        self.onlineRepository = OnlineAccountRepository(apiClient: apiClient)
-        self.connectivityChecker = connectivityChecker
+    /// 네트워크 지원 리포지토리 초기화
+    public init(apiClient: APIClient) {
+        self.apiClient = apiClient
     }
+    
+    // MARK: - 계좌 조회 메서드
     
     public func fetchAccounts() async throws -> [AccountEntity] {
-        // 온라인 상태이고 온라인 리포지토리가 있으면 API에서 최신 데이터 가져오기
-        if connectivityChecker.isConnected && onlineRepository != nil {
+        // API 클라이언트 확인
+        if let apiClient = apiClient {
             do {
-                let onlineAccounts = try await onlineRepository!.fetchAccounts()
+                // API 요청 생성 및 전송
+                let request = AccountListRequest()
+                let accountDTOs = try await apiClient.send(request)
                 
-                // 온라인 데이터로 로컬 데이터 업데이트
-                await updateLocalAccounts(with: onlineAccounts)
+                // DTO를 도메인 엔티티로 변환
+                let accountEntities = accountDTOs.map { $0.toEntity() }
                 
-                return onlineAccounts
+                // 로컬 캐시 업데이트
+                await updateLocalAccounts(with: accountEntities)
+                
+                return accountEntities
+            } catch let error as NetworkError where error == .offline || error == .noInternetConnection {
+                // 오프라인일 경우 로컬 데이터 반환
+                return accounts
             } catch {
-                // API 요청 실패 시 로컬 데이터 조회
-                print("온라인 계좌 조회 실패: \(error.localizedDescription)")
+                // 기타 오류는 상위로 전달
+                throw error
             }
         }
         
-        // 오프라인이거나 온라인 요청 실패 시 로컬 데이터 반환
-        return await withCheckedContinuation { continuation in
-            continuation.resume(returning: accounts)
-        }
+        // API 클라이언트가 없는 경우 로컬 데이터 반환
+        return accounts
     }
     
     public func fetchAccount(withId id: String) async throws -> AccountEntity? {
-        // 온라인 상태이고 온라인 리포지토리가 있으면 API에서 최신 데이터 가져오기
-        if connectivityChecker.isConnected && onlineRepository != nil {
+        // API 클라이언트 확인
+        if let apiClient = apiClient {
             do {
-                let onlineAccount = try await onlineRepository!.fetchAccount(id: id)
+                // API 요청 생성 및 전송
+                let request = AccountDetailRequest(accountId: id)
+                let accountDTO = try await apiClient.send(request)
                 
-                // 온라인 데이터로 로컬 데이터 업데이트
-                await updateLocalAccount(onlineAccount)
+                // DTO를 도메인 엔티티로 변환
+                let accountEntity = accountDTO.toEntity()
                 
-                return onlineAccount
+                // 로컬 캐시 업데이트
+                await updateLocalAccount(accountEntity)
+                
+                return accountEntity
+            } catch let error as NetworkError where error == .offline || error == .noInternetConnection {
+                // 오프라인일 경우 로컬 데이터 반환
+                return accounts.first { $0.id == id }
             } catch {
-                // API 요청 실패 시 로컬 데이터 조회
-                print("온라인 계좌 상세 조회 실패: \(error.localizedDescription)")
+                // 기타 오류는 상위로 전달
+                throw error
             }
         }
         
-        // 오프라인이거나 온라인 요청 실패 시 로컬 데이터 반환
-        return await withCheckedContinuation { continuation in
-            let account = accounts.first { $0.id == id }
-            continuation.resume(returning: account)
-        }
+        // API 클라이언트가 없는 경우 로컬 데이터 반환
+        return accounts.first { $0.id == id }
     }
     
     public func fetchTransactions(forAccountId accountId: String, limit: Int, offset: Int) async throws -> [TransactionEntity] {
-        // 온라인 상태이고 온라인 리포지토리가 있으면 API에서 최신 데이터 가져오기
-        if connectivityChecker.isConnected && onlineRepository != nil {
+        // API 클라이언트 확인
+        if let apiClient = apiClient {
             do {
-                let onlineTransactions = try await onlineRepository!.fetchTransactions(
-                    forAccountId: accountId, 
-                    limit: limit, 
+                // API 요청 생성 및 전송
+                let request = TransactionListRequest(
+                    accountId: accountId,
+                    limit: limit,
                     offset: offset
                 )
+                let transactionDTOs = try await apiClient.send(request)
                 
-                // 온라인 데이터로 로컬 데이터 업데이트
-                await updateLocalTransactions(forAccountId: accountId, transactions: onlineTransactions)
+                // DTO를 도메인 엔티티로 변환
+                let transactionEntities = transactionDTOs.map { $0.toEntity() }
                 
-                return onlineTransactions
+                // 로컬 캐시 업데이트
+                await updateLocalTransactions(forAccountId: accountId, transactions: transactionEntities)
+                
+                return transactionEntities
+            } catch let error as NetworkError where error == .offline || error == .noInternetConnection {
+                // 오프라인일 경우 로컬 데이터 반환
+                return await getLocalTransactions(forAccountId: accountId, limit: limit, offset: offset)
             } catch {
-                // API 요청 실패 시 로컬 데이터 조회
-                print("온라인 거래내역 조회 실패: \(error.localizedDescription)")
+                // 기타 오류는 상위로 전달
+                throw error
             }
         }
         
-        // 오프라인이거나 온라인 요청 실패 시 로컬 데이터 반환
-        return await withCheckedContinuation { continuation in
-            guard let account = accounts.first(where: { $0.id == accountId }),
-                  let transactions = account.transactions else {
-                continuation.resume(returning: [])
-                return
-            }
-            
-            let sortedTransactions = transactions.sorted { $0.date > $1.date }
-            let paginatedTransactions: [TransactionEntity]
-            
-            if offset < sortedTransactions.count {
-                let endIndex = min(offset + limit, sortedTransactions.count)
-                paginatedTransactions = Array(sortedTransactions[offset..<endIndex])
-            } else {
-                paginatedTransactions = []
-            }
-            
-            continuation.resume(returning: paginatedTransactions)
-        }
+        // API 클라이언트가 없는 경우 로컬 데이터 반환
+        return await getLocalTransactions(forAccountId: accountId, limit: limit, offset: offset)
     }
     
+    // MARK: - 계좌 관리 메서드
+    
     public func saveAccount(_ account: AccountEntity) async throws {
-        // 로컬 데이터베이스에 저장
-        await withCheckedContinuation { continuation in
-            if let index = accounts.firstIndex(where: { $0.id == account.id }) {
-                accounts[index] = account
-            } else {
-                accounts.append(account)
-            }
-            continuation.resume(returning: ())
-        }
+        // 로컬 캐시 업데이트
+        await updateLocalAccount(account)
         
-        // 온라인 상태이고 온라인 리포지토리가 있으면 API에도 저장 (향후 구현)
+        // API 클라이언트 확인
+        if let apiClient = apiClient {
+            do {
+                // API 요청 생성 및 전송
+                let accountDTO = account.toDTO()
+                let request = SaveAccountRequest(account: accountDTO)
+                _ = try await apiClient.send(request)
+            } catch let error as NetworkError where error == .offline || error == .noInternetConnection {
+                // 오프라인일 경우 무시 (로컬에만 저장)
+            } catch {
+                // 기타 오류는 상위로 전달
+                throw error
+            }
+        }
     }
     
     public func deleteAccount(withId id: String) async throws {
-        // 로컬 데이터베이스에서 삭제
-        await withCheckedContinuation { continuation in
-            accounts.removeAll { $0.id == id }
-            continuation.resume(returning: ())
-        }
+        // 로컬 캐시에서 삭제
+        accounts.removeAll { $0.id == id }
         
-        // 온라인 상태이고 온라인 리포지토리가 있으면 API에도 삭제 요청 (향후 구현)
+        // API 클라이언트 확인
+        if let apiClient = apiClient {
+            do {
+                // API 요청 생성 및 전송
+                let request = DeleteAccountRequest(accountId: id)
+                _ = try await apiClient.send(request)
+            } catch let error as NetworkError where error == .offline || error == .noInternetConnection {
+                // 오프라인일 경우 무시 (로컬에서만 삭제)
+            } catch {
+                // 기타 오류는 상위로 전달
+                throw error
+            }
+        }
     }
     
     public func updateAccount(_ account: AccountEntity) async throws {
-        // 로컬 데이터베이스 업데이트
-        await withCheckedContinuation { continuation in
-            if let index = accounts.firstIndex(where: { $0.id == account.id }) {
-                accounts[index] = account
-            }
-            continuation.resume(returning: ())
-        }
+        // 로컬 캐시 업데이트
+        await updateLocalAccount(account)
         
-        // 온라인 상태이고 온라인 리포지토리가 있으면 API에도 업데이트 요청 (향후 구현)
+        // API 클라이언트 확인
+        if let apiClient = apiClient {
+            do {
+                // API 요청 생성 및 전송
+                let accountDTO = account.toDTO()
+                let request = UpdateAccountRequest(account: accountDTO)
+                _ = try await apiClient.send(request)
+            } catch let error as NetworkError where error == .offline || error == .noInternetConnection {
+                // 오프라인일 경우 무시 (로컬에만 업데이트)
+            } catch {
+                // 기타 오류는 상위로 전달
+                throw error
+            }
+        }
     }
     
     public func addTransaction(_ transaction: TransactionEntity, toAccountWithId accountId: String) async throws {
         var tempTransaction = transaction
-        // 로컬 데이터베이스에 거래내역 추가
-        await withCheckedContinuation { continuation in
-            guard let accountIndex = accounts.firstIndex(where: { $0.id == accountId }) else {
-                // continuation.resume(throwing: RepositoryError.itemNotFound)
-                return
-            }
-            
-            var account = accounts[accountIndex]
-            
-            if account.transactions == nil {
-                account.transactions = []
-            }
-            
-            tempTransaction.account = account
-            account.transactions?.append(tempTransaction)
-            
-            // 잔액 업데이트
-            switch transaction.type {
-            case .deposit:
-                account.balance += tempTransaction.amount
-            case .withdrawal:
-                account.balance -= tempTransaction.amount
-            case .transfer:
-                if tempTransaction.isOutgoing {
-                    account.balance -= tempTransaction.amount
-                } else { // outgoing 또는 reference가 nil인 경우 포함
-                    account.balance += tempTransaction.amount
-                }
-            case .payment:
-                account.balance -= tempTransaction.amount
-            case .fee:
-                account.balance -= tempTransaction.amount
-            }
-            
-            account.updatedAt = Date()
-            
-            accounts[accountIndex] = account
-            continuation.resume(returning: ())
-        }
         
-        // 온라인 상태이고 온라인 리포지토리가 있으면 API에도 거래내역 추가 요청 (향후 구현)
+        // 로컬 캐시 업데이트
+        await addLocalTransaction(&tempTransaction, toAccountWithId: accountId)
+        
+        // API 클라이언트 확인
+        if let apiClient = apiClient {
+            do {
+                // API 요청 생성 및 전송
+                let transactionDTO = tempTransaction.toDTO()
+                let request = AddTransactionRequest(accountId: accountId, transaction: transactionDTO)
+                _ = try await apiClient.send(request)
+            } catch let error as NetworkError where error == .offline || error == .noInternetConnection {
+                // 오프라인일 경우 무시 (로컬에만 추가)
+            } catch {
+                // 기타 오류는 상위로 전달
+                throw error
+            }
+        }
     }
     
     public func generateMockData() {
         MockDataGenerator.generateMockData(into: &accounts)
     }
     
-    // MARK: - Private 데이터 동기화 메서드
+    // MARK: - 내부 헬퍼 메서드
     
-    private func updateLocalAccounts(with newAccounts: [AccountEntity]) async {
-        await withCheckedContinuation { continuation in
-            for newAccount in newAccounts {
-                if let index = accounts.firstIndex(where: { $0.id == newAccount.id }) {
-                    // 기존 계좌 업데이트
-                    accounts[index].name = newAccount.name
-                    accounts[index].type = newAccount.type
-                    accounts[index].number = newAccount.number
-                    accounts[index].balance = newAccount.balance
-                    accounts[index].isActive = newAccount.isActive
-                    accounts[index].updatedAt = Date()
-                } else {
-                    // 새 계좌 추가
-                    accounts.append(newAccount)
-                }
-            }
-            continuation.resume(returning: ())
+    /// 로컬 거래내역 조회
+    private func getLocalTransactions(forAccountId accountId: String, limit: Int, offset: Int) async -> [TransactionEntity] {
+        guard let account = accounts.first(where: { $0.id == accountId }),
+              let transactions = account.transactions else {
+            return []
         }
+        
+        let sortedTransactions = transactions.sorted { $0.date > $1.date }
+        
+        // 페이지네이션 적용
+        if offset < sortedTransactions.count {
+            let endIndex = min(offset + limit, sortedTransactions.count)
+            return Array(sortedTransactions[offset..<endIndex])
+        }
+        
+        return []
     }
     
-    private func updateLocalAccount(_ account: AccountEntity) async {
-        await withCheckedContinuation { continuation in
-            if let index = accounts.firstIndex(where: { $0.id == account.id }) {
+    /// 로컬 계좌 목록 업데이트
+    private func updateLocalAccounts(with newAccounts: [AccountEntity]) async {
+        for newAccount in newAccounts {
+            if let index = accounts.firstIndex(where: { $0.id == newAccount.id }) {
                 // 기존 계좌 업데이트
-                accounts[index].name = account.name
-                accounts[index].type = account.type
-                accounts[index].number = account.number
-                accounts[index].balance = account.balance
-                accounts[index].isActive = account.isActive
+                accounts[index].name = newAccount.name
+                accounts[index].type = newAccount.type
+                accounts[index].number = newAccount.number
+                accounts[index].balance = newAccount.balance
+                accounts[index].isActive = newAccount.isActive
                 accounts[index].updatedAt = Date()
             } else {
                 // 새 계좌 추가
-                accounts.append(account)
+                accounts.append(newAccount)
             }
-            continuation.resume(returning: ())
         }
     }
     
-    private func updateLocalTransactions(forAccountId accountId: String, transactions: [TransactionEntity]) async {
-        await withCheckedContinuation { continuation in
-            guard let accountIndex = accounts.firstIndex(where: { $0.id == accountId }) else {
-                print("계좌를 찾을 수 없음: \(accountId)")
-                continuation.resume(returning: ())
-                return
-            }
-            
-            var account = accounts[accountIndex]
-            
-            // 기존 거래내역 ID 수집
-            let existingTransactionIds = (account.transactions ?? []).map { $0.id }
-            let existingIdSet = Set(existingTransactionIds)
-            
-            // 새 거래내역 추가
-            for transaction in transactions {
-                var tempTransaction = transaction
-                if !existingIdSet.contains(transaction.id) {
-                    // 새 거래내역만 추가
-                    tempTransaction.account = account
-                    if account.transactions == nil {
-                        account.transactions = []
-                    }
-                    account.transactions?.append(tempTransaction)
-                }
-            }
-            
-            accounts[accountIndex] = account
-            continuation.resume(returning: ())
+    /// 로컬 계좌 업데이트
+    private func updateLocalAccount(_ account: AccountEntity) async {
+        if let index = accounts.firstIndex(where: { $0.id == account.id }) {
+            // 기존 계좌 업데이트
+            accounts[index] = account
+        } else {
+            // 새 계좌 추가
+            accounts.append(account)
         }
     }
-} 
+    
+    /// 로컬 거래내역 업데이트
+    private func updateLocalTransactions(forAccountId accountId: String, transactions: [TransactionEntity]) async {
+        guard let accountIndex = accounts.firstIndex(where: { $0.id == accountId }) else {
+            return
+        }
+        
+        var account = accounts[accountIndex]
+        
+        // 기존 거래내역 ID 수집
+        let existingTransactionIds = (account.transactions ?? []).map { $0.id }
+        let existingIdSet = Set(existingTransactionIds)
+        
+        // 새 거래내역 추가
+        for transaction in transactions {
+            var tempTransaction = transaction
+            if !existingIdSet.contains(transaction.id) {
+                // 새 거래내역만 추가
+                tempTransaction.account = account
+                if account.transactions == nil {
+                    account.transactions = []
+                }
+                account.transactions?.append(tempTransaction)
+            }
+        }
+        
+        accounts[accountIndex] = account
+    }
+    
+    /// 로컬 거래내역 추가
+    private func addLocalTransaction(_ transaction: inout TransactionEntity, toAccountWithId accountId: String) async {
+        guard let accountIndex = accounts.firstIndex(where: { $0.id == accountId }) else {
+            return
+        }
+        
+        var account = accounts[accountIndex]
+        
+        if account.transactions == nil {
+            account.transactions = []
+        }
+        
+        transaction.account = account
+        account.transactions?.append(transaction)
+        
+        // 잔액 업데이트
+        switch transaction.type {
+        case .deposit:
+            account.balance += transaction.amount
+        case .withdrawal:
+            account.balance -= transaction.amount
+        case .transfer:
+            if transaction.isOutgoing {
+                account.balance -= transaction.amount
+            } else {
+                account.balance += transaction.amount
+            }
+        case .payment:
+            account.balance -= transaction.amount
+        case .fee:
+            account.balance -= transaction.amount
+        case .unknown:
+            break // 처리하지 않음
+        }
+        
+        account.updatedAt = Date()
+        accounts[accountIndex] = account
+    }
+}
+
+// MARK: - DTO 변환 메서드
+extension AccountEntity {
+    func toDTO() -> AccountDTO {
+        return AccountDTO(
+            id: id,
+            name: name,
+            type: type.rawValue,
+            number: number,
+            balance: balance,
+            isActive: isActive
+        )
+    }
+}
+
+extension TransactionEntity {
+    func toDTO() -> TransactionDTO {
+        return TransactionDTO(
+            id: id,
+            amount: amount,
+            type: type.rawValue,
+            date: date,
+            description: description,
+            isOutgoing: isOutgoing
+        )
+    }
+}
+
+
+

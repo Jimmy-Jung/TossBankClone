@@ -5,10 +5,6 @@ public protocol FetchAccountsUseCaseProtocol {
     func execute() async -> Result<[AccountEntity], EntityError>
 }
 
-public protocol FetchAccountDetailsUseCaseProtocol {
-    func execute(accountId: String) async -> Result<AccountDetailsEntity, EntityError>
-}
-
 public protocol AddTransactionUseCaseProtocol {
     func execute(accountId: String, transaction: TransactionEntity) async -> Result<Void, EntityError>
 }
@@ -25,36 +21,6 @@ public final class FetchAccountsUseCase: FetchAccountsUseCaseProtocol {
         do {
             let accounts = try await accountRepository.fetchAccounts()
             return .success(accounts)
-        } catch {
-            return .failure(.repositoryError(error))
-        }
-    }
-}
-
-public final class FetchAccountDetailsUseCase: FetchAccountDetailsUseCaseProtocol {
-    private let accountRepository: AccountRepositoryProtocol
-    
-    public init(accountRepository: AccountRepositoryProtocol) {
-        self.accountRepository = accountRepository
-    }
-    
-    public func execute(accountId: String) async -> Result<AccountDetailsEntity, EntityError> {
-        do {
-            guard let account = try await accountRepository.fetchAccount(withId: accountId) else {
-                return .failure(.notFound)
-            }
-            
-            let transactions = try await accountRepository.fetchTransactions(
-                forAccountId: accountId, 
-                limit: 20, 
-                offset: 0
-            )
-            return .success(
-                AccountDetailsEntity(
-                    account: account,
-                    recentTransactions: transactions
-                )
-            )
         } catch {
             return .failure(.repositoryError(error))
         }

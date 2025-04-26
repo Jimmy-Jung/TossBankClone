@@ -136,10 +136,22 @@ public final class NetworkService: NetworkServiceProtocol {
         try await applyPlugins(to: &urlRequest)
         
         // 네트워크 요청 실행
-        let (data, response) = try await session.data(for: urlRequest)
-        
-        // 응답 처리
-        return try await processResponse(urlRequest, response, data)
+        do {
+            let (data, response) = try await session.data(for: urlRequest)
+            
+            // 응답 처리
+            return try await processResponse(urlRequest, response, data)
+        } catch let urlError as URLError {
+            // 네트워크 관련 URLError를 NetworkError.noInternetConnection 변환
+            switch urlError.code {
+            case .notConnectedToInternet, .networkConnectionLost, .dataNotAllowed:
+                throw NetworkError.noInternetConnection
+            default:
+                throw NetworkError.connectionError(urlError)
+            }
+        } catch {
+            throw error
+        }
     }
     
     /// 응답 처리를 위한 공통 메서드

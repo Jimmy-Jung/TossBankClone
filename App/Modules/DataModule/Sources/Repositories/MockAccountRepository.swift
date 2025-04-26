@@ -223,6 +223,8 @@ public class MockAccountRepository: AccountRepositoryProtocol {
             account.balance -= tempTransaction.amount
         case .fee:
             account.balance -= tempTransaction.amount
+        case .unknown:
+            break // 처리하지 않음
         }
         
         account.updatedAt = Date()

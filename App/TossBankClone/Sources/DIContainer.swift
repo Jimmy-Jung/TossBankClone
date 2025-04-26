@@ -70,10 +70,6 @@ final class AccountDIContainer: AccountDIContainerProtocol {
     func makeFetchAccountsUseCase() -> FetchAccountsUseCase {
         return FetchAccountsUseCase(accountRepository: accountRepository)
     }
-    
-    func makeFetchAccountDetailsUseCase() -> FetchAccountDetailsUseCase {
-        return FetchAccountDetailsUseCase(accountRepository: accountRepository)
-    }
 }
 
 // MARK: - Transfer DI Container

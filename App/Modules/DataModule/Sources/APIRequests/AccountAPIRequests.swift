@@ -2,76 +2,91 @@ import Foundation
 import NetworkModule
 import DomainModule
 
-/// 계좌 목록 조회 요청
-public struct GetAccountsRequest: APIRequest {
-    public typealias Response = [AccountDTO]
+/// 계좌 목록 요청
+struct AccountListRequest: APIRequest {
+    typealias Response = [AccountDTO]
     
-    public var path: String { "/accounts" }
-    public var method: HTTPMethod { .get }
-    public var requiresAuth: Bool { return true }
-    
-    public init() {}
+    var path: String { return "/api/accounts" }
+    var method: HTTPMethod { return .get }
 }
 
-/// 계좌 상세 조회 요청
-public struct GetAccountRequest: APIRequest {
-    public typealias Response = AccountDTO
+/// 계좌 상세 요청
+struct AccountDetailRequest: APIRequest {
+    typealias Response = AccountDTO
     
-    public let accountId: String
+    let accountId: String
     
-    public var path: String { "/accounts/\(accountId)" }
-    public var method: HTTPMethod { .get }
-    public var requiresAuth: Bool { return true }
-    
-    public init(accountId: String) {
-        self.accountId = accountId
-    }
+    var path: String { return "/api/accounts/\(accountId)" }
+    var method: HTTPMethod { return .get }
 }
 
-/// 계좌 거래내역 조회 요청
-public struct GetTransactionsRequest: APIRequest {
-    public typealias Response = [TransactionDTO]
+/// 계좌 거래내역 요청
+struct TransactionListRequest: APIRequest {
+    typealias Response = [TransactionDTO]
     
-    public let accountId: String
-    public let limit: Int
-    public let offset: Int
+    let accountId: String
+    let limit: Int
+    let offset: Int
     
-    public var path: String { "/accounts/\(accountId)/transactions" }
-    public var method: HTTPMethod { .get }
-    public var requiresAuth: Bool { return true }
-    
-    public var queryParameters: [String : String]? {
+    var path: String { return "/api/accounts/\(accountId)/transactions" }
+    var method: HTTPMethod { return .get }
+    var queryParameters: [String: String]? {
         return [
-            "limit": "\(limit)",
-            "offset": "\(offset)"
+            "limit": String(limit),
+            "offset": String(offset)
         ]
     }
+}
+
+/// 계좌 저장 요청
+struct SaveAccountRequest: APIRequest {
+    typealias Response = AccountDTO
     
-    public init(accountId: String, limit: Int = 20, offset: Int = 0) {
-        self.accountId = accountId
-        self.limit = limit
-        self.offset = offset
+    let account: AccountDTO
+    
+    var path: String { return "/api/accounts" }
+    var method: HTTPMethod { return .post }
+    var requestBody: RequestBody {
+        return .encodable(account)
     }
 }
 
-/// 계좌 잔액 업데이트 요청
-public struct UpdateAccountBalanceRequest: APIRequest {
-    public typealias Response = AccountDTO
+/// 계좌 업데이트 요청
+struct UpdateAccountRequest: APIRequest {
+    typealias Response = AccountDTO
     
-    public let accountId: String
-    public let newBalance: Decimal
+    let account: AccountDTO
     
-    public var path: String { "/accounts/\(accountId)/balance" }
-    public var method: HTTPMethod { .patch }
-    public var requiresAuth: Bool { return true }
-    
-    public var requestBody: RequestBody {
-        let parameters = ["balance": newBalance] as [String: Any]
-        return .dictionary(parameters)
+    var path: String { return "/api/accounts/\(account.id)" }
+    var method: HTTPMethod { return .put }
+    var requestBody: RequestBody {
+        return .encodable(account)
     }
+}
+
+/// 계좌 삭제 요청
+struct DeleteAccountRequest: APIRequest {
+    typealias Response = EmptyResponse
     
-    public init(accountId: String, newBalance: Decimal) {
-        self.accountId = accountId
-        self.newBalance = newBalance
+    let accountId: String
+    
+    var path: String { return "/api/accounts/\(accountId)" }
+    var method: HTTPMethod { return .delete }
+}
+
+/// 거래내역 추가 요청
+struct AddTransactionRequest: APIRequest {
+    typealias Response = TransactionDTO
+    
+    let accountId: String
+    let transaction: TransactionDTO
+    
+    var path: String { return "/api/accounts/\(accountId)/transactions" }
+    var method: HTTPMethod { return .post }
+    var requestBody: RequestBody {
+        return .encodable(transaction)
     }
-} 
+}
+
+/// 빈 응답 타입 (HTTP 204 등의 응답을 위함)
+struct EmptyResponse: Decodable {}
