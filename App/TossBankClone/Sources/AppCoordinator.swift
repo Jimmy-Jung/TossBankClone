@@ -1,11 +1,78 @@
 import Foundation
 import UIKit
-import CoordinatorModule
 import DomainModule
 import AuthFeature
 import AccountFeature
 import SettingsFeature
 import TransferFeature
+import NetworkModule
+import AuthenticationModule
+import SharedModule
+
+final class AppDIContainer: AppDIContainerProtocol {
+    
+    // MARK: - 속성
+    private let authenticationManager: AuthenticationManagerProtocol
+    public let environment: AppEnvironment
+    public let networkService: NetworkServiceProtocol
+    private let baseURL: URL
+    
+    // MARK: - 초기화
+    init(
+        environment: AppEnvironment = .test,
+        baseURL: URL = URL(string: "https://api.tossbank.com")!
+    ) {
+        self.environment = environment
+        self.baseURL = baseURL
+        
+        // 환경에 따른 초기화
+        switch environment {
+        case .production:
+            // 프로덕션 환경에서는 실제 서비스 사용
+            self.networkService = NetworkService()
+            self.authenticationManager = AuthenticationManager()
+            
+        case .test:
+            // 테스트 환경에서는 모의 서비스 사용
+            self.networkService = MockNetworkService()
+            self.authenticationManager = AuthenticationManager()
+        }
+    }
+
+    
+    // MARK: - 하위 컨테이너 팩토리 메서드
+    
+    func authDIContainer() -> AuthDIContainerProtocol {
+        return AuthDIContainer(
+            authenticationManager: authenticationManager,
+            networkService: networkService,
+            baseURL: baseURL
+        )
+    }
+    
+    func accountDIContainer() -> AccountDIContainerProtocol {
+        return AccountDIContainer(
+            environment: environment,
+            authenticationManager: authenticationManager,
+            networkService: networkService,
+            baseURL: baseURL
+        )
+    }
+    
+    func transferDIContainer() -> TransferDIContainerProtocol {
+        return TransferDIContainer(
+            networkService: networkService,
+            baseURL: baseURL
+        )
+    }
+    
+    func settingsDIContainer() -> SettingsDIContainerProtocol {
+        return SettingsDIContainer(
+            networkService: networkService,
+            baseURL: baseURL
+        )
+    }
+}
 
 /// 앱 코디네이터 구현
 final class AppCoordinator: Coordinator {

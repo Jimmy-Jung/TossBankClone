@@ -1,8 +1,7 @@
-import Foundation
 import UIKit
-import CoordinatorModule
 import SwiftUI
 import AuthenticationModule
+import SharedModule
 
 /// 인증 코디네이터 구현
 public final class AuthCoordinator: NSObject, Coordinator {

@@ -3,7 +3,7 @@ import AuthenticationModule
 import Combine
 import SharedModule
 
-public final class PINSetupViewModel {
+public final class PINSetupViewModel: AsyncViewModel {
     // MARK: - Input & Action
     public enum Input {
         case viewDidLoad
@@ -85,11 +85,8 @@ public final class PINSetupViewModel {
     public init(authManager: AuthenticationManager = AuthenticationManager.shared) {
         self.authManager = authManager
     }
-}
 
-// MARK: - AsyncViewModel
-extension PINSetupViewModel: AsyncViewModel {
-    public nonisolated func transform(_ input: Input) async -> [Action] {
+    public func transform(_ input: Input) async -> [Action] {
         switch input {
         case .viewDidLoad:
             return []
@@ -160,10 +157,8 @@ extension PINSetupViewModel: AsyncViewModel {
     public func handleError(_ error: Error) async {
         await showError(message: "오류가 발생했습니다: \(error.localizedDescription)")
     }
-}
 
 // MARK: - 내부 메서드
-private extension PINSetupViewModel {
     func updateFirstPIN(_ pin: String) async throws {
         firstPIN = pin
     }
@@ -217,19 +212,13 @@ private extension PINSetupViewModel {
             errorMessage = ""
         }
     }
-}
-
-// MARK: - 공개 인터페이스
-extension PINSetupViewModel {
+    
+    // MARK: - 공개 인터페이스
     public func onNumberTapped(_ number: Int) {
-        Task {
-            await send(.numberTapped(number))
-        }
+        send(.numberTapped(number))
     }
     
     public func onDeleteTapped() {
-        Task {
-            await send(.deleteTapped)
-        }
+        send(.deleteTapped)
     }
-} 
+}

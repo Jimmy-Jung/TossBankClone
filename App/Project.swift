@@ -34,13 +34,12 @@ let project = Project(
                 .target(name: "DataModule"),
                 .target(name: "NetworkModule"),
                 .target(name: "AuthenticationModule"),
-                .target(name: "CoordinatorModule"),
                 .target(name: "DesignSystem"),
                 .target(name: "SharedModule"),
                 .target(name: "AuthFeature"),
                 .target(name: "AccountFeature"),
                 .target(name: "SettingsFeature"),
-                .target(name: "TransferFeature")
+                .target(name: "TransferFeature"),
             ]
         ),
         .target(
@@ -53,11 +52,11 @@ let project = Project(
             resources: ["Modules/Features/Auth/Resources/**"],
             dependencies: [
                 .target(name: "DomainModule"),
+                .target(name: "DataModule"),
                 .target(name: "NetworkModule"),
                 .target(name: "DesignSystem"),
                 .target(name: "SharedModule"),
                 .target(name: "AuthenticationModule"),
-                .target(name: "CoordinatorModule")
             ]
         ),
         .target(
@@ -70,10 +69,11 @@ let project = Project(
             resources: ["Modules/Features/Account/Resources/**"],
             dependencies: [
                 .target(name: "DomainModule"),
+                .target(name: "DataModule"),
                 .target(name: "NetworkModule"),
                 .target(name: "DesignSystem"),
                 .target(name: "SharedModule"),
-                .target(name: "CoordinatorModule")
+                .target(name: "AuthenticationModule"),
             ]
         ),
         .target(
@@ -86,10 +86,10 @@ let project = Project(
             resources: ["Modules/Features/Transfer/Resources/**"],
             dependencies: [
                 .target(name: "DomainModule"),
+                .target(name: "DataModule"),
                 .target(name: "NetworkModule"),
                 .target(name: "DesignSystem"),
                 .target(name: "SharedModule"),
-                .target(name: "CoordinatorModule")
             ]
         ),
         .target(
@@ -104,7 +104,6 @@ let project = Project(
                 .target(name: "DomainModule"),
                 .target(name: "DesignSystem"),
                 .target(name: "SharedModule"),
-                .target(name: "CoordinatorModule")
             ]
         ),
         .target(
@@ -136,14 +135,6 @@ let project = Project(
             dependencies: [
                 .target(name: "DomainModule")
             ]
-        ),
-        .target(
-            name: "CoordinatorModule",
-            destinations: .iOS,
-            product: .framework,
-            bundleId: "io.tuist.TossBankClone.coordinator",
-            infoPlist: .default,
-            sources: ["Modules/CoordinatorModule/Sources/**"]
         ),
         .target(
             name: "NetworkModule",

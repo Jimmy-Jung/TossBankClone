@@ -1,7 +1,10 @@
-import Foundation
 import UIKit
-import CoordinatorModule
 import SwiftUI
+import DomainModule
+import DataModule
+import SharedModule
+import AuthenticationModule
+import NetworkModule
 
 /// 계좌 코디네이터 구현
 public final class AccountCoordinator: Coordinator {
@@ -10,7 +13,10 @@ public final class AccountCoordinator: Coordinator {
     
     public weak var delegate: AccountCoordinatorDelegate?
     
-    public init(navigationController: UINavigationController, diContainer: AccountDIContainerProtocol) {
+    public init(
+        navigationController: UINavigationController,
+        diContainer: AccountDIContainerProtocol
+    ) {
         self.navigationController = navigationController
         self.diContainer = diContainer
     }
@@ -23,7 +29,14 @@ public final class AccountCoordinator: Coordinator {
     
     private func showAccountList() {
         // 계좌 목록 뷰모델 생성
-        let viewModel = AccountListViewModel()
+        guard let viewModel = diContainer.makeAccountListViewModel() as? AccountListViewModel else {
+            return
+        }
+        
+        // 계좌 선택 시 호출될 콜백 설정
+        viewModel.onAccountSelected = { [weak self] accountId in
+            self?.showAccountDetail(accountId: accountId)
+        }
         
         // SwiftUI 뷰를 UIKit 호스팅 컨트롤러로 래핑
         let accountListView = AccountListView(viewModel: viewModel)
@@ -49,10 +62,14 @@ public final class AccountCoordinator: Coordinator {
         navigationController.setViewControllers([viewController], animated: false)
     }
     
-    private func showAccountDetail(accountId: String) {
+    public func showAccountDetail(accountId: String) {
         // 계좌 상세 뷰모델 생성
-        let viewModel = AccountDetailViewModel(accountId: accountId)
-        viewModel.onTransferButtonTapped = { [weak self] in
+        guard let viewModel = diContainer.makeAccountDetailViewModel(accountId: accountId) as? AccountDetailViewModel else {
+            return
+        }
+        
+        // 송금 버튼 탭 이벤트 처리
+        viewModel.onTransferRequested = { [weak self] in
             self?.delegate?.accountCoordinatorDidRequestTransfer(fromAccountId: accountId)
         }
         
@@ -70,211 +87,3 @@ public final class AccountCoordinator: Coordinator {
         delegate?.accountCoordinatorDidRequestSettings()
     }
 }
-
-// MARK: - 뷰모델 임시 구현
-// 실제 구현에서는 별도 파일로 분리되어야 함
-
-class AccountListViewModel: ObservableObject {
-    @Published var accounts: [Account] = []
-    
-    init() {
-        // 테스트 데이터 로드
-        loadMockData()
-    }
-    
-    func loadMockData() {
-        accounts = [
-            Account(id: "1", name: "토스뱅크 통장", balance: 1250000),
-            Account(id: "2", name: "비상금 계좌", balance: 5000000)
-        ]
-    }
-}
-
-class AccountDetailViewModel: ObservableObject {
-    @Published var account: Account?
-    @Published var transactions: [Transaction] = []
-    
-    var onTransferButtonTapped: (() -> Void)?
-    
-    let accountId: String
-    
-    init(accountId: String) {
-        self.accountId = accountId
-        loadAccount()
-        loadTransactions()
-    }
-    
-    func loadAccount() {
-        // 테스트 데이터
-        account = Account(id: accountId, name: "토스뱅크 통장", balance: 1250000)
-    }
-    
-    func loadTransactions() {
-        // 테스트 데이터
-        transactions = [
-            Transaction(id: "t1", description: "편의점", amount: -4500, date: Date()),
-            Transaction(id: "t2", description: "급여", amount: 2500000, date: Date().addingTimeInterval(-86400*3))
-        ]
-    }
-    
-    func handleTransferTap() {
-        onTransferButtonTapped?()
-    }
-}
-
-// MARK: - 모델 임시 구현
-// 실제 구현에서는 도메인 모듈에 정의되어야 함
-
-struct Account: Identifiable {
-    let id: String
-    let name: String
-    let balance: Double
-}
-
-struct Transaction: Identifiable {
-    let id: String
-    let description: String
-    let amount: Double
-    let date: Date
-}
-
-// MARK: - 뷰 임시 구현
-// 실제 구현에서는 별도 파일로 분리되어야 함
-
-struct AccountListView: View {
-    @ObservedObject var viewModel: AccountListViewModel
-    
-    var body: some View {
-        List(viewModel.accounts) { account in
-            AccountRow(account: account)
-        }
-    }
-}
-
-struct AccountRow: View {
-    let account: Account
-    
-    var body: some View {
-        HStack {
-            VStack(alignment: .leading) {
-                Text(account.name)
-                    .font(.headline)
-                Text(formatCurrency(account.balance))
-                    .font(.subheadline)
-            }
-            Spacer()
-            Image(systemName: "chevron.right")
-                .foregroundColor(.gray)
-        }
-        .padding(.vertical, 8)
-    }
-    
-    private func formatCurrency(_ amount: Double) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.currencySymbol = "₩"
-        formatter.currencyDecimalSeparator = ","
-        return formatter.string(from: NSNumber(value: amount)) ?? "₩0"
-    }
-}
-
-struct AccountDetailView: View {
-    @ObservedObject var viewModel: AccountDetailViewModel
-    
-    var body: some View {
-        VStack {
-            if let account = viewModel.account {
-                // 계좌 정보
-                AccountInfoCard(account: account)
-                    .padding()
-                
-                // 송금 버튼
-                Button(action: {
-                    viewModel.handleTransferTap()
-                }) {
-                    Text("송금하기")
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.blue)
-                        .cornerRadius(10)
-                }
-                .padding(.horizontal)
-                
-                // 거래 내역 목록
-                List(viewModel.transactions) { transaction in
-                    TransactionRow(transaction: transaction)
-                }
-            } else {
-                ProgressView()
-                    .progressViewStyle(CircularProgressViewStyle())
-            }
-        }
-        .navigationTitle("계좌 상세")
-    }
-}
-
-struct AccountInfoCard: View {
-    let account: Account
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(account.name)
-                .font(.headline)
-            
-            Text(formatCurrency(account.balance))
-                .font(.title)
-                .fontWeight(.bold)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding()
-        .background(Color.gray.opacity(0.1))
-        .cornerRadius(12)
-    }
-    
-    private func formatCurrency(_ amount: Double) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.currencySymbol = "₩"
-        formatter.currencyDecimalSeparator = ","
-        return formatter.string(from: NSNumber(value: amount)) ?? "₩0"
-    }
-}
-
-struct TransactionRow: View {
-    let transaction: Transaction
-    
-    var body: some View {
-        HStack {
-            VStack(alignment: .leading) {
-                Text(transaction.description)
-                    .font(.headline)
-                
-                Text(formatDate(transaction.date))
-                    .font(.caption)
-                    .foregroundColor(.gray)
-            }
-            
-            Spacer()
-            
-            Text(formatCurrency(transaction.amount))
-                .font(.subheadline)
-                .foregroundColor(transaction.amount >= 0 ? .blue : .primary)
-        }
-        .padding(.vertical, 4)
-    }
-    
-    private func formatCurrency(_ amount: Double) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.currencySymbol = "₩"
-        formatter.currencyDecimalSeparator = ","
-        return formatter.string(from: NSNumber(value: amount)) ?? "₩0"
-    }
-    
-    private func formatDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy.MM.dd"
-        return formatter.string(from: date)
-    }
-} 

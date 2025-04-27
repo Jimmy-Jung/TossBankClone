@@ -4,7 +4,7 @@ import Combine
 import LocalAuthentication
 import SharedModule
 
-public final class PINLoginViewModel {
+public final class PINLoginViewModel: AsyncViewModel {
     // MARK: - Input & Action
     public enum Input {
         case viewDidLoad
@@ -79,11 +79,8 @@ public final class PINLoginViewModel {
     public init(authManager: AuthenticationManager = AuthenticationManager.shared) {
         self.authManager = authManager
     }
-}
-
-// MARK: - AsyncViewModel
-extension PINLoginViewModel: AsyncViewModel {
-    public nonisolated func transform(_ input: Input) async -> [Action] {
+    
+    public func transform(_ input: Input) async -> [Action] {
         switch input {
         case .viewDidLoad:
             return [.checkBiometricAvailability]
@@ -148,10 +145,9 @@ extension PINLoginViewModel: AsyncViewModel {
     public func handleError(_ error: Error) async {
         await showError(message: "오류가 발생했습니다: \(error.localizedDescription)")
     }
-}
-
-// MARK: - 내부 메서드
-private extension PINLoginViewModel {
+    
+    // MARK: - 내부 메서드
+    
     func updatePIN(_ updatedPIN: String) async throws {
         pin = updatedPIN
     }
@@ -169,7 +165,7 @@ private extension PINLoginViewModel {
         //         await handleAuthenticationSuccess()
         //     } else {
         //         remainingAttempts -= 1
-        //         
+        //
         //         if remainingAttempts <= 0 {
         //             await lockAccount()
         //         } else {
@@ -250,26 +246,18 @@ private extension PINLoginViewModel {
             isBiometricAvailable = false
         }
     }
-}
-
-// MARK: - 공개 인터페이스
-extension PINLoginViewModel {
+    
+    // MARK: - 공개 인터페이스
     public func onNumberTapped(_ number: Int) {
-        Task {
-            await send(.numberTapped(number))
-        }
+        send(.numberTapped(number))
     }
     
     public func onDeleteTapped() {
-        Task {
-            await send(.deleteTapped)
-        }
+        send(.deleteTapped)
     }
     
     public func authenticateWithBiometrics() {
-        Task {
-            await send(.useBiometrics)
-        }
+        send(.useBiometrics)
     }
 }
 
@@ -299,4 +287,4 @@ public enum BiometricType {
             return "Face ID"
         }
     }
-} 
+}

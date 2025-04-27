@@ -80,7 +80,7 @@
 // 
 // // MARK: - AsyncViewModel
 // extension TransferViewModel: AsyncViewModel {
-//     public nonisolated func transform(_ input: Input) async -> [Action] {
+//     public func transform(_ input: Input) async -> [Action] {
 //         switch input {
 //         case .viewDidLoad:
 //             return [.loadInitialData]

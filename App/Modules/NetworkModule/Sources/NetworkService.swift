@@ -22,7 +22,6 @@ public protocol NetworkServiceProtocol {
 /// 네트워크 서비스 구현체
 public final class NetworkService: NetworkServiceProtocol {
     // MARK: - 속성
-    private let baseURL: URL
     private let session: URLSessionProtocol
     private let decoder: JSONDecoder
     private let encoder: JSONEncoder
@@ -32,7 +31,6 @@ public final class NetworkService: NetworkServiceProtocol {
     // MARK: - 초기화
     /// 네트워크 서비스 초기화
     /// - Parameters:
-    ///   - baseURL: 기본 URL
     ///   - session: URLSessionProtocol (기본값: URLSession.shared)
     ///   - decoder: JSONDecoder (기본값: JSONDecoder())
     ///   - encoder: JSONEncoder (기본값: JSONEncoder())
@@ -41,14 +39,12 @@ public final class NetworkService: NetworkServiceProtocol {
     ///   - ConnectivityPlugin: 네트워크 연결 상태 플러그인 (기본값: ConnectivityPlugin(reachability: reachability))
     ///   - RetryPlugin: 네트워크 요청 재시도 플러그인 (기본값: RetryPlugin())
     public init(
-        baseURL: URL,
         session: URLSessionProtocol = URLSession.shared,
         decoder: JSONDecoder = JSONDecoder(),
         encoder: JSONEncoder = JSONEncoder(),
         plugins: [NetworkPlugin] = [],
         reachability: NetworkReachability = NetworkReachabilityImpl.shared
     ) {
-        self.baseURL = baseURL
         self.session = session
         self.decoder = decoder
         self.encoder = encoder
@@ -78,7 +74,6 @@ public final class NetworkService: NetworkServiceProtocol {
     
     /// 인증 토큰 제공자를 사용하는 초기화 메서드
     public convenience init(
-        baseURL: URL,
         authTokenProvider: @escaping () -> String?,
         session: URLSessionProtocol = URLSession.shared,
         decoder: JSONDecoder = JSONDecoder(),
@@ -96,7 +91,6 @@ public final class NetworkService: NetworkServiceProtocol {
         }
         
         self.init(
-            baseURL: baseURL,
             session: session,
             decoder: decoder,
             encoder: encoder,

@@ -193,10 +193,6 @@ public class AccountRepositoryImpl: AccountRepositoryProtocol {
         }
     }
     
-    public func generateMockData() {
-        MockDataGenerator.generateMockData(into: &accounts)
-    }
-    
     // MARK: - 내부 헬퍼 메서드
     
     /// 로컬 거래내역 조회

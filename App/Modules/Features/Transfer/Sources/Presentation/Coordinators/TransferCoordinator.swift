@@ -1,7 +1,7 @@
 import Foundation
 import UIKit
-import CoordinatorModule
 import SwiftUI
+import SharedModule
 
 /// 송금 코디네이터 구현
 public final class TransferCoordinator: Coordinator {
