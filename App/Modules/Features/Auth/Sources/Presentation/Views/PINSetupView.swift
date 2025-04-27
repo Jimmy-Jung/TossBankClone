@@ -1,3 +1,11 @@
+//
+//  PINSetupView.swift
+//  AuthFeature
+//
+//  Created by 정준영 on 2025/4/26.
+//  Copyright © 2025 TossBank. All rights reserved.
+//
+
 import SwiftUI
 import DesignSystem
 

@@ -1,3 +1,11 @@
+//
+//  AccountListViewModel.swift
+//  AccountFeature
+//
+//  Created by 정준영 on 2025/4/27.
+//  Copyright © 2025 TossBank. All rights reserved.
+//
+
 import SwiftUI
 import DomainModule
 import SharedModule
@@ -30,7 +38,6 @@ public final class AccountListViewModel: AsyncViewModel {
         self.fetchAccountsUseCase = fetchAccountsUseCase
     }
 
-// MARK: - AsyncViewModel
     public func transform(_ input: Input) async -> [Action] {
         switch input {
         case .viewDidLoad, .refresh:

@@ -33,7 +33,7 @@ struct AccountDetailView: View {
                 }
             } else if let account = viewModel.account {
                 // 계좌 정보
-                AccountInfoCard(account: account)
+                AccountInfoCardView(account: account)
                     .padding()
                 
                 // 송금 버튼
@@ -71,74 +71,5 @@ struct AccountDetailView: View {
         .task {
             viewModel.send(.viewDidLoad)
         }
-    }
-}
-
-// MARK: - 보조 뷰 컴포넌트
-
-struct AccountInfoCard: View {
-    let account: AccountEntity
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(account.name)
-                .font(.headline)
-            
-            Text(account.number)
-                .font(.subheadline)
-                .foregroundColor(.gray)
-            
-            Text("\(formatCurrency(account.balance))원")
-                .font(.title)
-                .fontWeight(.bold)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding()
-        .background(Color.gray.opacity(0.1))
-        .cornerRadius(12)
-    }
-    
-    private func formatCurrency(_ amount: Decimal) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .decimal
-        formatter.maximumFractionDigits = 0
-        return formatter.string(from: amount as NSNumber) ?? "0"
-    }
-}
-
-struct TransactionRow: View {
-    let transaction: TransactionEntity
-    
-    var body: some View {
-        HStack {
-            VStack(alignment: .leading) {
-                Text(transaction.description)
-                    .font(.headline)
-                
-                Text(formatDate(transaction.date))
-                    .font(.caption)
-                    .foregroundColor(.gray)
-            }
-            
-            Spacer()
-            
-            Text("\(formatCurrency(transaction.amount))원")
-                .font(.subheadline)
-                .foregroundColor(transaction.amount >= 0 ? .blue : .primary)
-        }
-        .padding(.vertical, 4)
-    }
-    
-    private func formatCurrency(_ amount: Decimal) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .decimal
-        formatter.maximumFractionDigits = 0
-        return formatter.string(from: amount as NSNumber) ?? "0"
-    }
-    
-    private func formatDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy.MM.dd"
-        return formatter.string(from: date)
     }
 }

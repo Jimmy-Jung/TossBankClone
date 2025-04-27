@@ -102,6 +102,8 @@ let project = Project(
             resources: ["Modules/Features/Settings/Resources/**"],
             dependencies: [
                 .target(name: "DomainModule"),
+                .target(name: "DataModule"),
+                .target(name: "NetworkModule"),
                 .target(name: "DesignSystem"),
                 .target(name: "SharedModule"),
             ]
