@@ -165,7 +165,10 @@ let project = Project(
             bundleId: "io.tuist.TossBankClone.shared",
             infoPlist: .default,
             sources: ["Modules/SharedModule/Sources/**"],
-            dependencies: []
+            dependencies: [
+                .target(name: "DomainModule"),
+                
+            ]
         ),
         .target(
             name: "DesignSystem",

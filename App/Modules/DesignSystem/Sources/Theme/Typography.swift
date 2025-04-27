@@ -121,7 +121,7 @@ struct TypographyStyleKey: EnvironmentKey {
 }
 
 extension EnvironmentValues {
-    var typographyStyle: TypographyStyle {
+    public var typographyStyle: TypographyStyle {
         get { self[TypographyStyleKey.self] }
         set { self[TypographyStyleKey.self] = newValue }
     }

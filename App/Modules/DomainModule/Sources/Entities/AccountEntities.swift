@@ -105,3 +105,17 @@ public struct AccountDetailsEntity {
         self.recentTransactions = recentTransactions
     }
 }
+
+public struct BankAccount: Identifiable {
+    public let id: String
+    public let bankName: String
+    public let accountNumber: String
+    public let balance: Double
+    
+    public init(id: String, bankName: String, accountNumber: String, balance: Double) {
+        self.id = id
+        self.bankName = bankName
+        self.accountNumber = accountNumber
+        self.balance = balance
+    }
+}

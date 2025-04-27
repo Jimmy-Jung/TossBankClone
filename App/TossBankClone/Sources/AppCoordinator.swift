@@ -61,6 +61,7 @@ final class AppDIContainer: AppDIContainerProtocol {
     
     func transferDIContainer() -> TransferDIContainerProtocol {
         return TransferDIContainer(
+            environment: environment,
             networkService: networkService,
             baseURL: baseURL
         )

@@ -8,6 +8,7 @@
 //     @ObservedObject private var viewModel: TransferViewModel
 //     @FocusState private var isAmountFieldFocused: Bool
 //     @Environment(\.presentationMode) private var presentationMode
+//     @Environment(\.typographyStyle) private var typography
 //     
 //     // MARK: - 생성자
 //     public init(viewModel: TransferViewModel) {
@@ -17,7 +18,7 @@
 //     // MARK: - 바디
 //     public var body: some View {
 //         ZStack {
-//             TossColor.background
+//             ColorTokens.Background.primary
 //                 .ignoresSafeArea()
 //             
 //             VStack(spacing: 0) {
@@ -87,14 +88,14 @@
 //             }) {
 //                 Image(systemName: "chevron.left")
 //                     .font(.title3)
-//                     .foregroundColor(TossColor.textPrimary)
+//                     .foregroundColor(ColorTokens.Text.primary)
 //             }
 //             
 //             Spacer()
 //             
 //             Text("송금")
-//                 .font(TossTypo.title3)
-//                 .foregroundColor(TossColor.textPrimary)
+//                 .font(typography.title3)
+//                 .foregroundColor(ColorTokens.Text.primary)
 //             
 //             Spacer()
 //             
@@ -104,32 +105,32 @@
 //             }) {
 //                 Image(systemName: "xmark")
 //                     .font(.title3)
-//                     .foregroundColor(TossColor.textPrimary)
+//                     .foregroundColor(ColorTokens.Text.primary)
 //             }
 //         }
 //         .padding(.horizontal, 20)
 //         .padding(.vertical, 12)
-//         .background(TossColor.background)
+//         .background(ColorTokens.Background.primary)
 //     }
 //     
 //     private var amountInputSection: some View {
-//         TossCard {
+//         VStack {
 //             VStack(spacing: 16) {
 //                 Text("얼마를 보낼까요?")
-//                     .font(TossTypo.title3)
-//                     .foregroundColor(TossColor.textPrimary)
+//                     .font(typography.title3)
+//                     .foregroundColor(ColorTokens.Text.primary)
 //                     .frame(maxWidth: .infinity, alignment: .leading)
 //                 
 //                 HStack(alignment: .center) {
 //                     Text("₩")
-//                         .font(TossTypo.title1)
-//                         .foregroundColor(TossColor.textPrimary)
+//                         .font(typography.title1)
+//                         .foregroundColor(ColorTokens.Text.primary)
 //                     
 //                     TextField("0", text: Binding(
 //                         get: { viewModel.state.formattedAmount },
 //                         set: { viewModel.send(.amountChanged($0)) }
 //                     ))
-//                     .font(TossTypo.largeTitle)
+//                     .font(typography.largeTitle)
 //                     .keyboardType(.numberPad)
 //                     .multilineTextAlignment(.trailing)
 //                     .focused($isAmountFieldFocused)
@@ -137,19 +138,19 @@
 //                 .padding(.vertical, 8)
 //                 
 //                 Divider()
-//                     .background(TossColor.divider)
+//                     .background(ColorTokens.Border.divider)
 //                     .padding(.bottom, 8)
 //                 
 //                 // 잔액 및 오류 표시
 //                 HStack {
 //                     if let errorMessage = viewModel.state.amountError {
 //                         Text(errorMessage)
-//                             .font(TossTypo.caption)
-//                             .foregroundColor(TossColor.error)
+//                             .font(typography.caption1)
+//                             .foregroundColor(ColorTokens.State.error)
 //                     } else {
 //                         Text("잔액: \(viewModel.state.formattedBalance)")
-//                             .font(TossTypo.caption)
-//                             .foregroundColor(TossColor.textSecondary)
+//                             .font(typography.caption1)
+//                             .foregroundColor(ColorTokens.Text.secondary)
 //                     }
 //                     
 //                     Spacer()
@@ -157,19 +158,21 @@
 //                     Button("전액") {
 //                         viewModel.send(.maxAmountTapped)
 //                     }
-//                     .font(TossTypo.caption)
-//                     .foregroundColor(TossColor.primary)
+//                     .font(typography.caption1)
+//                     .foregroundColor(ColorTokens.Brand.primary)
 //                 }
 //             }
 //             .padding(16)
 //         }
+//         .background(ColorTokens.Background.card)
+//         .cornerRadius(12)
 //     }
 //     
 //     private var receiverSection: some View {
 //         VStack(spacing: 12) {
 //             Text("어디로 보낼까요?")
-//                 .font(TossTypo.title3)
-//                 .foregroundColor(TossColor.textPrimary)
+//                 .font(typography.title3)
+//                 .foregroundColor(ColorTokens.Text.primary)
 //                 .frame(maxWidth: .infinity, alignment: .leading)
 //             
 //             if let account = viewModel.state.receiverAccount {
@@ -183,20 +186,20 @@
 //                     HStack {
 //                         Image(systemName: "person.crop.circle")
 //                             .font(.title2)
-//                             .foregroundColor(TossColor.primary)
+//                             .foregroundColor(ColorTokens.Brand.primary)
 //                         
 //                         Text("받을 계좌 선택하기")
-//                             .font(TossTypo.body)
-//                             .foregroundColor(TossColor.textPrimary)
+//                             .font(typography.body)
+//                             .foregroundColor(ColorTokens.Text.primary)
 //                         
 //                         Spacer()
 //                         
 //                         Image(systemName: "chevron.right")
 //                             .font(.subheadline)
-//                             .foregroundColor(TossColor.textSecondary)
+//                             .foregroundColor(ColorTokens.Text.secondary)
 //                     }
 //                     .padding(16)
-//                     .background(TossColor.backgroundSecondary)
+//                     .background(ColorTokens.Background.secondary)
 //                     .cornerRadius(12)
 //                 }
 //             }
@@ -204,33 +207,33 @@
 //     }
 //     
 //     private func receiverAccountCard(_ account: FrequentAccount) -> some View {
-//         TossCard {
+//         VStack {
 //             HStack {
 //                 VStack(alignment: .leading, spacing: 4) {
 //                     Text(account.bankName)
-//                         .font(TossTypo.bodyMedium)
-//                         .foregroundColor(TossColor.textPrimary)
+//                         .font(typography.bodyMedium)
+//                         .foregroundColor(ColorTokens.Text.primary)
 //                     
 //                     Text(formatAccountNumber(account.accountNumber))
-//                         .font(TossTypo.caption)
-//                         .foregroundColor(TossColor.textSecondary)
+//                         .font(typography.caption)
+//                         .foregroundColor(ColorTokens.Text.secondary)
 //                     
 //                     if let nickname = account.nickname {
 //                         Text(nickname)
-//                             .font(TossTypo.captionSmall)
-//                             .foregroundColor(TossColor.textTertiary)
+//                             .font(typography.captionSmall)
+//                             .foregroundColor(ColorTokens.Text.tertiary)
 //                     }
 //                 }
 //                 
 //                 Spacer()
 //                 
 //                 Text(account.holderName)
-//                     .font(TossTypo.bodyMedium)
-//                     .foregroundColor(TossColor.textSecondary)
+//                     .font(typography.bodyMedium)
+//                     .foregroundColor(ColorTokens.Text.secondary)
 //                 
 //                 Image(systemName: "chevron.right")
 //                     .font(.subheadline)
-//                     .foregroundColor(TossColor.textSecondary)
+//                     .foregroundColor(ColorTokens.Text.secondary)
 //             }
 //             .padding(16)
 //             .contentShape(Rectangle())
@@ -243,17 +246,17 @@
 //     private var memoSection: some View {
 //         VStack(spacing: 8) {
 //             Text("받는 분에게 표시될 메모")
-//                 .font(TossTypo.bodyMedium)
-//                 .foregroundColor(TossColor.textPrimary)
+//                 .font(typography.bodyMedium)
+//                 .foregroundColor(ColorTokens.Text.primary)
 //                 .frame(maxWidth: .infinity, alignment: .leading)
 //             
 //             TextField("(선택) 최대 20자", text: Binding(
 //                 get: { viewModel.state.memo },
 //                 set: { viewModel.send(.memoChanged(String($0.prefix(20)))) }
 //             ))
-//             .font(TossTypo.body)
+//             .font(typography.body)
 //             .padding(16)
-//             .background(TossColor.backgroundSecondary)
+//             .background(ColorTokens.Background.secondary)
 //             .cornerRadius(12)
 //         }
 //     }
@@ -267,7 +270,7 @@
 //         ) {
 //             Text("다음")
 //                 .frame(maxWidth: .infinity)
-//                 .font(TossTypo.button)
+//                 .font(typography.button)
 //         }
 //         .frame(maxWidth: .infinity)
 //         .padding(.horizontal, 20)
@@ -323,7 +326,7 @@
 //             // 헤더
 //             HStack {
 //                 Text("계좌 선택")
-//                     .font(TossTypo.title3)
+//                     .font(typography.title3)
 //                     .fontWeight(.bold)
 //                 
 //                 Spacer()
@@ -346,7 +349,7 @@
 //                 accountListView
 //             }
 //         }
-//         .background(TossColor.background)
+//         .background(ColorTokens.Background.primary)
 //     }
 //     
 //     private var accountListView: some View {
@@ -370,15 +373,15 @@
 //             
 //             Image(systemName: "person.crop.circle.badge.questionmark")
 //                 .font(.system(size: 50))
-//                 .foregroundColor(TossColor.textSecondary)
+//                 .foregroundColor(ColorTokens.Text.secondary)
 //             
 //             Text("자주 쓰는 계좌가 없습니다")
-//                 .font(TossTypo.bodyMedium)
-//                 .foregroundColor(TossColor.textPrimary)
+//                 .font(typography.bodyMedium)
+//                 .foregroundColor(ColorTokens.Text.primary)
 //             
 //             Text("계좌번호를 직접 입력해주세요")
-//                 .font(TossTypo.caption)
-//                 .foregroundColor(TossColor.textSecondary)
+//                 .font(typography.caption)
+//                 .foregroundColor(ColorTokens.Text.secondary)
 //             
 //             Spacer()
 //         }
@@ -394,25 +397,25 @@
 //     
 //     // MARK: - 바디
 //     var body: some View {
-//         TossCard {
+//         VStack {
 //             HStack {
 //                 VStack(alignment: .leading, spacing: 4) {
 //                     Text(account.bankName)
-//                         .font(TossTypo.bodyMedium)
-//                         .foregroundColor(TossColor.textPrimary)
+//                         .font(typography.bodyMedium)
+//                         .foregroundColor(ColorTokens.Text.primary)
 //                     
 //                     HStack {
 //                         Text(formatAccountNumber(account.accountNumber))
-//                             .font(TossTypo.caption)
-//                             .foregroundColor(TossColor.textSecondary)
+//                             .font(typography.caption)
+//                             .foregroundColor(ColorTokens.Text.secondary)
 //                         
 //                         if let nickname = account.nickname {
 //                             Text(nickname)
-//                                 .font(TossTypo.captionSmall)
-//                                 .foregroundColor(TossColor.textSecondary)
+//                                 .font(typography.captionSmall)
+//                                 .foregroundColor(ColorTokens.Text.secondary)
 //                                 .padding(.horizontal, 6)
 //                                 .padding(.vertical, 2)
-//                                 .background(TossColor.backgroundTertiary)
+//                                 .background(ColorTokens.Background.tertiary)
 //                                 .cornerRadius(4)
 //                         }
 //                     }
@@ -421,8 +424,8 @@
 //                 Spacer()
 //                 
 //                 Text(account.holderName)
-//                     .font(TossTypo.bodyMedium)
-//                     .foregroundColor(TossColor.textSecondary)
+//                     .font(typography.bodyMedium)
+//                     .foregroundColor(ColorTokens.Text.secondary)
 //                 }
 //             .padding(16)
 //         }
