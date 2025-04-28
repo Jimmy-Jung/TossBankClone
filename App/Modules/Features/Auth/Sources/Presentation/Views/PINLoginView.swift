@@ -10,11 +10,13 @@ import SwiftUI
 import DesignSystem
 
 public struct PINLoginView: View {
-    @StateObject private var viewModel = PINLoginViewModel()
-    private let onLoginSuccess: () -> Void
+    @ObservedObject private var viewModel: PINLoginViewModel
     
-    public init(onLoginSuccess: @escaping () -> Void) {
-        self.onLoginSuccess = onLoginSuccess
+    public init(viewModel: PINLoginViewModel?) {
+        guard let viewModel = viewModel else {
+            fatalError("PINLoginView requires a valid PINLoginViewModel")
+        }
+        self._viewModel = ObservedObject(wrappedValue: viewModel)
     }
     
     public var body: some View {
@@ -37,8 +39,12 @@ public struct PINLoginView: View {
                     lockedView
                 } else {
                     PINKeypad(
-                        onNumberTapped: viewModel.onNumberTapped,
-                        onDeleteTapped: viewModel.onDeleteTapped
+                        onNumberTapped: { number in
+                            viewModel.send(.numberTapped(number))
+                        },
+                        onDeleteTapped: {
+                            viewModel.send(.deleteTapped)
+                        }
                     )
                     
                     if viewModel.isBiometricAvailable {
@@ -53,12 +59,8 @@ public struct PINLoginView: View {
         .padding(.horizontal, 24)
         .padding(.top, 60)
         .navigationBarTitleDisplayMode(.inline)
-        .onChange(of: viewModel.currentState) { newState in
-            if newState == .success {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                    onLoginSuccess()
-                }
-            }
+        .onAppear {
+            viewModel.send(.viewDidLoad)
         }
     }
     
@@ -84,7 +86,7 @@ public struct PINLoginView: View {
     
     private var biometricButton: some View {
         Button {
-            viewModel.authenticateWithBiometrics()
+            viewModel.send(.useBiometrics)
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: viewModel.biometricType.systemImageName)
@@ -148,8 +150,6 @@ public struct PINLoginView: View {
 // MARK: - 프리뷰
 struct PINLoginView_Previews: PreviewProvider {
     static var previews: some View {
-        PINLoginView {
-            print("로그인 성공")
-        }
+        PINLoginView(viewModel: nil)
     }
 } 

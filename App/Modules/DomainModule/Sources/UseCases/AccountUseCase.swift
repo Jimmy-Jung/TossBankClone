@@ -94,13 +94,3 @@ public final class FetchTransactionsUseCase: FetchTransactionsUseCaseProtocol {
         }
     }
 }
-
-// MARK: - EntityError 정의
-public enum EntityError: Error {
-    case notFound
-    case invalidInput
-    case insufficientFunds
-    case limitExceeded
-    case repositoryError(Error)
-    case unexpectedError(Error)
-}

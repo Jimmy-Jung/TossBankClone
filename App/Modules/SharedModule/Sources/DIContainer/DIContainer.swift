@@ -8,7 +8,7 @@ public enum AppEnvironment {
 }
 
 @MainActor
-public protocol AppDIContainerProtocol: AnyObject {
+public protocol AppDIContainerProtocol {
     func authDIContainer() -> AuthDIContainerProtocol
     func accountDIContainer() -> AccountDIContainerProtocol
     func transferDIContainer() -> TransferDIContainerProtocol
@@ -18,14 +18,55 @@ public protocol AppDIContainerProtocol: AnyObject {
     var environment: AppEnvironment { get }
 }
 
+// MARK: - Auth 모듈 DIContainer 프로토콜
 @MainActor
-public protocol AuthDIContainerProtocol: AnyObject {}
+public protocol AuthDIContainerProtocol {
+    
+    // ViewModels
+    func makeLoginViewModel(
+        onLoginSuccess: @escaping () -> Void,
+        onRegisterTapped: @escaping () -> Void
+    ) -> any AsyncViewModel
+    
+    func makePINLoginViewModel(
+        onLoginSuccess: @escaping () -> Void
+    ) -> any AsyncViewModel
+    
+    func makePINSetupViewModel(
+        onSetupComplete: @escaping () -> Void
+    ) -> any AsyncViewModel
+    
+    func makeRegisterViewModel(
+        onRegisterSuccess: @escaping () -> Void,
+        onBackTapped: @escaping () -> Void
+    ) -> any AsyncViewModel
+    
+    // UseCases
+    func makeCheckPINExistsUseCase() -> CheckPINExistsUseCaseProtocol
+}
 
 @MainActor
-public protocol SettingsDIContainerProtocol: AnyObject {}
+// MARK: - 설정 모듈 DIContainer 프로토콜
+public protocol SettingsDIContainerProtocol {
+    // ViewModels
+    func makeSecuritySettingsViewModel(
+        onPINSetupTapped: (() -> Void)?,
+        onPINChangeTapped: (() -> Void)?
+    ) -> any AsyncViewModel
+    
+    func makePINSetupViewModel(
+        onSetupComplete: @escaping () -> Void
+    ) -> any AsyncViewModel
+    
+    // UseCases
+    func makeCheckPINExistsUseCase() -> CheckPINExistsUseCaseProtocol
+    
+    // AuthDIContainer 접근
+    func authDIContainer() -> AuthDIContainerProtocol
+}
 
 @MainActor
-public protocol AccountDIContainerProtocol: AnyObject {
+public protocol AccountDIContainerProtocol {
     func makeAccountListViewModel() -> any AsyncViewModel
     func makeAccountDetailViewModel(accountId: String) -> any AsyncViewModel
 }

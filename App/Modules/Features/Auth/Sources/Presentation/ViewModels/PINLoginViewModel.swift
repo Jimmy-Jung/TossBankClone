@@ -7,7 +7,7 @@
 //
 
 import SwiftUI
-import AuthenticationModule
+import DomainModule
 import Combine
 import LocalAuthentication
 import SharedModule
@@ -29,6 +29,7 @@ public final class PINLoginViewModel: AsyncViewModel {
         case lockAccount
         case showError(String)
         case checkBiometricAvailability
+        case authenticationSuccess
     }
     
     // MARK: - 상태 열거형
@@ -50,7 +51,9 @@ public final class PINLoginViewModel: AsyncViewModel {
     @Published public var biometricType: BiometricType = .none
     
     // MARK: - 의존성
-    private let authManager: AuthenticationManager
+    private let validatePINUseCase: ValidatePINUseCaseProtocol
+    private let biometricAuthUseCase: BiometricAuthUseCaseProtocol
+    private let onLoginSuccess: () -> Void
     
     // MARK: - 계산 속성
     public var headerTitle: String {
@@ -84,8 +87,14 @@ public final class PINLoginViewModel: AsyncViewModel {
     }
     
     // MARK: - 생성자
-    public init(authManager: AuthenticationManager = AuthenticationManager.shared) {
-        self.authManager = authManager
+    public init(
+        validatePINUseCase: ValidatePINUseCaseProtocol,
+        biometricAuthUseCase: BiometricAuthUseCaseProtocol,
+        onLoginSuccess: @escaping () -> Void
+    ) {
+        self.validatePINUseCase = validatePINUseCase
+        self.biometricAuthUseCase = biometricAuthUseCase
+        self.onLoginSuccess = onLoginSuccess
     }
     
     public func transform(_ input: Input) async -> [Action] {
@@ -147,6 +156,8 @@ public final class PINLoginViewModel: AsyncViewModel {
             await showError(message: message)
         case .checkBiometricAvailability:
             await checkBiometricAvailability()
+        case .authenticationSuccess:
+            await handleAuthenticationSuccess()
         }
     }
     
@@ -166,45 +177,65 @@ public final class PINLoginViewModel: AsyncViewModel {
         // 인증 지연 시뮬레이션
         try await Task.sleep(nanoseconds: 500_000_000) // 0.5초 대기
         
-        // 실제로는 아래와 같이 구현 예정
-        // do {
-        //     let isValid = try await authManager.validatePIN(pin)
-        //     if isValid {
-        //         await handleAuthenticationSuccess()
-        //     } else {
-        //         remainingAttempts -= 1
-        //
-        //         if remainingAttempts <= 0 {
-        //             await lockAccount()
-        //         } else {
-        //             await showError(message: "잘못된 PIN 번호입니다.")
-        //         }
-        //     }
-        // } catch {
-        //     await showError(message: "인증 중 오류가 발생했습니다: \(error.localizedDescription)")
-        // }
+        let result = await validatePINUseCase.execute(pin: pin)
+        
+        switch result {
+        case .success(let isValid):
+            if isValid {
+                try? await perform(.authenticationSuccess)
+            } else {
+                remainingAttempts -= 1
+                
+                if remainingAttempts <= 0 {
+                    try? await perform(.lockAccount)
+                } else {
+                    await showError(message: "잘못된 PIN 번호입니다.")
+                }
+            }
+        case .failure(let error):
+            switch error {
+            case .notFound:
+                await showError(message: "PIN이 설정되어 있지 않습니다.")
+            case .validationError:
+                await showError(message: "유효하지 않은 PIN 번호입니다.")
+            default:
+                await showError(message: "인증 중 오류가 발생했습니다.")
+            }
+        }
     }
     
     func authenticateWithBiometrics() async throws {
         currentState = .authenticating
         
-        // 실제로는 아래와 같이 구현 예정
-        // do {
-        //     let isValid = try await authManager.authenticateBiometric()
-        //     if isValid {
-        //         await handleAuthenticationSuccess()
-        //     } else {
-        //         await showError(message: "생체 인증에 실패했습니다. PIN을 입력해주세요.")
-        //     }
-        // } catch {
-        //     await showError(message: "생체 인증에 실패했습니다: \(error.localizedDescription)")
-        // }
+        let result = await biometricAuthUseCase.execute()
+        
+        switch result {
+        case .success(let success):
+            if success {
+                try? await perform(.authenticationSuccess)
+            } else {
+                await showError(message: "생체 인증에 실패했습니다. PIN을 입력해주세요.")
+            }
+        case .failure(let error):
+            switch error {
+            case .accessDenied:
+                await showError(message: "생체 인증을 사용할 수 없습니다.")
+            case .validationError:
+                await showError(message: "생체 인증에 실패했습니다. PIN을 입력해주세요.")
+            default:
+                await showError(message: "생체 인증 중 오류가 발생했습니다.")
+            }
+        }
     }
     
     func handleAuthenticationSuccess() async {
         withAnimation {
             currentState = .success
         }
+
+        // 1.5초 후 성공 콜백 호출
+        try? await Task.sleep(nanoseconds: 1_500_000_000)
+        onLoginSuccess()
     }
     
     func lockAccount() async {
@@ -252,47 +283,6 @@ public final class PINLoginViewModel: AsyncViewModel {
         } else {
             biometricType = .none
             isBiometricAvailable = false
-        }
-    }
-    
-    // MARK: - 공개 인터페이스
-    public func onNumberTapped(_ number: Int) {
-        send(.numberTapped(number))
-    }
-    
-    public func onDeleteTapped() {
-        send(.deleteTapped)
-    }
-    
-    public func authenticateWithBiometrics() {
-        send(.useBiometrics)
-    }
-}
-
-public enum BiometricType {
-    case none
-    case touchID
-    case faceID
-    
-    var systemImageName: String {
-        switch self {
-        case .none:
-            return ""
-        case .touchID:
-            return "touchid"
-        case .faceID:
-            return "faceid"
-        }
-    }
-    
-    var displayName: String {
-        switch self {
-        case .none:
-            return ""
-        case .touchID:
-            return "Touch ID"
-        case .faceID:
-            return "Face ID"
         }
     }
 }

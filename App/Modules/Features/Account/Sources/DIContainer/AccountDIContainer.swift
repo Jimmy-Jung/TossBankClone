@@ -10,26 +10,22 @@ import Foundation
 import DataModule
 import DomainModule
 import NetworkModule
-import AuthenticationModule
 import SharedModule
 
 /// 계좌 모듈 DI 컨테이너
 public final class AccountDIContainer: AccountDIContainerProtocol {
     // MARK: - 속성
     private let environment: AppEnvironment
-    private let authenticationManager: AuthenticationManagerProtocol
     private let networkService: NetworkServiceProtocol
     private let baseURL: URL
     
     // MARK: - 초기화
     public init(
         environment: AppEnvironment,
-        authenticationManager: AuthenticationManagerProtocol,
         networkService: NetworkServiceProtocol,
         baseURL: URL
     ) {
         self.environment = environment
-        self.authenticationManager = authenticationManager
         self.networkService = networkService
         self.baseURL = baseURL
         

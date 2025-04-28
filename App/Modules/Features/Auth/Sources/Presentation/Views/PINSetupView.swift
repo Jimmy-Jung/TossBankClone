@@ -2,7 +2,7 @@
 //  PINSetupView.swift
 //  AuthFeature
 //
-//  Created by 정준영 on 2025/4/26.
+//  Created by 정준영 on 2025/4/27.
 //  Copyright © 2025 TossBank. All rights reserved.
 //
 
@@ -11,11 +11,13 @@ import DesignSystem
 
 /// PIN 설정 화면
 public struct PINSetupView: View {
-    @StateObject private var viewModel = PINSetupViewModel()
-    private let onCompleted: () -> Void
+    @ObservedObject private var viewModel: PINSetupViewModel
     
-    public init(onCompleted: @escaping () -> Void) {
-        self.onCompleted = onCompleted
+    public init(viewModel: PINSetupViewModel?) {
+        guard let viewModel = viewModel else {
+            fatalError("PINSetupView requires a valid PINSetupViewModel")
+        }
+        self._viewModel = ObservedObject(wrappedValue: viewModel)
     }
     
     public var body: some View {
@@ -28,15 +30,19 @@ public struct PINSetupView: View {
                 successView
             } else {
                 PINIndicator(
-                    pinLength: viewModel.currentPINLength,
+                    pinLength: viewModel.currentState == .enterPIN ? viewModel.pin.count : viewModel.confirmPin.count,
                     isError: viewModel.isError,
                     maxLength: 6
                 )
                 .padding(.bottom, 40)
                 
                 PINKeypad(
-                    onNumberTapped: viewModel.onNumberTapped,
-                    onDeleteTapped: viewModel.onDeleteTapped
+                    onNumberTapped: { number in
+                        viewModel.send(.numberTapped(number))
+                    },
+                    onDeleteTapped: {
+                        viewModel.send(.deleteTapped)
+                    }
                 )
             }
             
@@ -45,6 +51,9 @@ public struct PINSetupView: View {
         .padding(.horizontal, 24)
         .padding(.top, 60)
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            viewModel.send(.viewDidLoad)
+        }
     }
     
     private var headerView: some View {
@@ -57,12 +66,12 @@ public struct PINSetupView: View {
                 .font(.system(size: 16))
                 .foregroundColor(ColorTokens.Text.secondary)
             
-            Text(viewModel.errorMessage)
-                .font(.system(size: 14))
-                .foregroundColor(.red)
-                .padding(.top, 8)
-                .opacity(viewModel.isError ? 1 : 0) // Alpha 값 조절
-                .animation(.easeInOut, value: viewModel.isError) // 애니메이션 추가
+            if viewModel.isError {
+                Text(viewModel.errorMessage)
+                    .font(.system(size: 14))
+                    .foregroundColor(ColorTokens.State.error)
+                    .padding(.top, 8)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -72,24 +81,16 @@ public struct PINSetupView: View {
             Image(systemName: "checkmark.circle.fill")
                 .resizable()
                 .frame(width: 80, height: 80)
-                .foregroundColor(.accentColor)
+                .foregroundColor(ColorTokens.Brand.primary)
+            
+            Text("PIN 설정 완료")
+                .font(.system(size: 24, weight: .bold))
+                .padding(.bottom, 8)
             
             Text("PIN 번호가 성공적으로 설정되었습니다")
-                .font(.system(size: 18, weight: .medium))
+                .font(.system(size: 16))
+                .foregroundColor(ColorTokens.Text.secondary)
                 .multilineTextAlignment(.center)
-            
-            TossButton(style: .primary, size: .large) {
-                onCompleted()
-            } label: {
-                Text("완료")
-            }
-            .padding(.top, 20)
-        }
-        .padding(.horizontal, 24)
-        .onAppear {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                onCompleted()
-            }
         }
     }
 }
@@ -97,8 +98,6 @@ public struct PINSetupView: View {
 // MARK: - 프리뷰
 struct PINSetupView_Previews: PreviewProvider {
     static var previews: some View {
-        PINSetupView {
-            print("PIN 설정 완료")
-        }
+        PINSetupView(viewModel: nil)
     }
 } 

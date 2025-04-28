@@ -2,23 +2,23 @@ import Foundation
 import DomainModule
 
 /// 계좌 확인 응답 DTO
-struct VerifyAccountResponseDTO: Decodable {
-    let isValid: Bool
-    let holderName: String?
-    let bankName: String?
+public struct VerifyAccountResponseDTO: Decodable {
+    public let isValid: Bool
+    public let holderName: String?
+    public let bankName: String?
 }
 
 /// 송금 응답 DTO
-struct TransferResponseDTO: Decodable {
-    let transactionId: String
-    let fromAccountId: String
-    let toAccountNumber: String
-    let amount: Decimal
-    let fee: Decimal?
-    let status: String
-    let timestamp: Date
+public struct TransferResponseDTO: Decodable {
+    public let transactionId: String
+    public let fromAccountId: String
+    public let toAccountNumber: String
+    public let amount: Decimal
+    public let fee: Decimal?
+    public let status: String
+    public let timestamp: Date
     
-    func toEntity() -> TransferResultEntity {
+    public func toEntity() -> TransferResultEntity {
         return TransferResultEntity(
             transactionId: transactionId,
             fromAccountId: fromAccountId,
@@ -32,17 +32,17 @@ struct TransferResponseDTO: Decodable {
 }
 
 /// 송금 내역 DTO
-struct TransferHistoryDTO: Decodable {
-    let id: String
-    let fromAccountId: String
-    let toAccountNumber: String
-    let toAccountName: String?
-    let amount: Decimal
-    let description: String
-    let timestamp: Date
-    let status: String
+public struct TransferHistoryDTO: Decodable {
+    public let id: String
+    public let fromAccountId: String
+    public let toAccountNumber: String
+    public let toAccountName: String?
+    public let amount: Decimal
+    public let description: String
+    public let timestamp: Date
+    public let status: String
     
-    func toEntity() -> TransferHistoryEntity {
+    public func toEntity() -> TransferHistoryEntity {
         return TransferHistoryEntity(
             id: id,
             fromAccountId: fromAccountId,
@@ -57,15 +57,15 @@ struct TransferHistoryDTO: Decodable {
 }
 
 /// 자주 쓰는 계좌 DTO
-struct FrequentAccountDTO: Decodable {
-    let id: String
-    let bankName: String
-    let accountNumber: String
-    let holderName: String
-    let nickname: String?
-    let lastUsed: Date?
+public struct FrequentAccountDTO: Decodable {
+    public let id: String
+    public let bankName: String
+    public let accountNumber: String
+    public let holderName: String
+    public let nickname: String?
+    public let lastUsed: Date?
     
-    func toEntity() -> FrequentAccountEntity {
+    public func toEntity() -> FrequentAccountEntity {
         return FrequentAccountEntity(
             id: id,
             bankName: bankName,

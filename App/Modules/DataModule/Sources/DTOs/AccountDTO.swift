@@ -2,15 +2,15 @@ import Foundation
 import DomainModule
 
 // DTO 모델
-struct AccountDTO: Codable {
-    let id: String
-    let name: String
-    let type: String
-    let number: String
-    let balance: Decimal
-    let isActive: Bool
+public struct AccountDTO: Codable {
+    public let id: String
+    public let name: String
+    public let type: String
+    public let number: String
+    public let balance: Decimal
+    public let isActive: Bool
     
-    func toEntity() -> AccountEntity {
+    public func toEntity() -> AccountEntity {
         return AccountEntity(
             id: id,
             name: name,
@@ -24,15 +24,15 @@ struct AccountDTO: Codable {
     }
 }
 
-struct TransactionDTO: Codable {
-    let id: String
-    let amount: Decimal
-    let type: String
-    let date: Date
-    let description: String
-    let isOutgoing: Bool
+public struct TransactionDTO: Codable {
+    public let id: String
+    public let amount: Decimal
+    public let type: String
+    public let date: Date
+    public let description: String
+    public let isOutgoing: Bool
     
-    func toEntity() -> TransactionEntity {
+    public func toEntity() -> TransactionEntity {
         return TransactionEntity(
             id: id,
             amount: amount,

@@ -2,14 +2,13 @@
 //  PINSetupViewModel.swift
 //  AuthFeature
 //
-//  Created by 정준영 on 2025/4/26.
+//  Created by 정준영 on 2025/4/27.
 //  Copyright © 2025 TossBank. All rights reserved.
 //
 
-import SwiftUI
-import AuthenticationModule
-import Combine
+import Foundation
 import SharedModule
+import DomainModule
 
 public final class PINSetupViewModel: AsyncViewModel {
     // MARK: - Input & Action
@@ -17,216 +16,230 @@ public final class PINSetupViewModel: AsyncViewModel {
         case viewDidLoad
         case numberTapped(Int)
         case deleteTapped
+        case confirmPIN
     }
     
     public enum Action {
-        case updateFirstPIN(String)
-        case updateConfirmPIN(String)
-        case proceedToConfirmation
-        case validatePINs
-        case resetError
+        case updatePIN(String)
+        case verifyPIN
+        case saveAndConfirmPIN
+        case resetState
+        case showError(String)
+        case setupComplete
     }
     
     // MARK: - 상태 열거형
     public enum SetupState {
-        case initial      // 첫 번째 PIN 입력
-        case confirmation // 확인을 위한 PIN 재입력
-        case success      // 설정 완료
-        case error        // 오류 발생
+        case enterPIN
+        case confirmPIN
+        case success
+        case error
     }
     
     // MARK: - 퍼블리셔
-    @Published public var firstPIN: String = ""
-    @Published public var confirmPIN: String = ""
-    @Published public var currentState: SetupState = .initial
+    @Published public var pin: String = ""
+    @Published public var confirmPin: String = ""
+    @Published public var currentState: SetupState = .enterPIN
     @Published public var errorMessage: String = ""
     @Published public var isError: Bool = false
     
     // MARK: - 의존성
-    private let authManager: AuthenticationManager
+    private let savePINUseCase: SavePINUseCaseProtocol
+    private let onSetupComplete: () -> Void
     
     // MARK: - 계산 속성
-    public var activePIN: Binding<String> {
-        Binding<String>(
-            get: { self.currentState == .initial ? self.firstPIN : self.confirmPIN },
-            set: { newValue in
-                if self.currentState == .initial {
-                    self.firstPIN = newValue
-                } else {
-                    self.confirmPIN = newValue
-                }
-            }
-        )
-    }
-    
-    public var currentPINLength: Int {
-        currentState == .initial ? firstPIN.count : confirmPIN.count
-    }
-    
     public var headerTitle: String {
         switch currentState {
-        case .initial:
+        case .enterPIN:
             return "PIN 번호 설정"
-        case .confirmation:
+        case .confirmPIN:
             return "PIN 번호 확인"
         case .success:
             return "PIN 설정 완료"
         case .error:
-            return "PIN 번호 확인"
+            return "오류"
         }
     }
     
     public var headerSubtitle: String {
         switch currentState {
-        case .initial:
+        case .enterPIN:
             return "6자리 PIN 번호를 입력해주세요"
-        case .confirmation:
-            return "PIN 번호를 한번 더 입력해주세요"
+        case .confirmPIN:
+            return "PIN 번호를 다시 한번 입력해주세요"
         case .success:
             return "PIN 번호가 성공적으로 설정되었습니다"
         case .error:
-            return "PIN 번호를 한번 더 입력해주세요"
+            return errorMessage
         }
     }
     
-    // MARK: - 생성자
-    public init(authManager: AuthenticationManager = AuthenticationManager.shared) {
-        self.authManager = authManager
+    public var currentPINDisplay: String {
+        return currentState == .enterPIN ? pin : confirmPin
     }
-
+    
+    // MARK: - 생성자
+    public init(
+        savePINUseCase: SavePINUseCaseProtocol,
+        onSetupComplete: @escaping () -> Void
+    ) {
+        self.savePINUseCase = savePINUseCase
+        self.onSetupComplete = onSetupComplete
+    }
+    
+    // MARK: - AsyncViewModel 구현
     public func transform(_ input: Input) async -> [Action] {
         switch input {
         case .viewDidLoad:
             return []
             
         case .numberTapped(let number):
-            guard currentPINLength < 6 else { return [] }
-            
-            var actions: [Action] = []
-            
-            if isError {
-                actions.append(.resetError)
-            }
-            
-            if currentState == .initial {
-                let updatedPIN = firstPIN + "\(number)"
-                actions.append(.updateFirstPIN(updatedPIN))
-                
-                if updatedPIN.count == 6 {
-                    actions.append(.proceedToConfirmation)
-                }
-            } else {
-                let updatedPIN = confirmPIN + "\(number)"
-                actions.append(.updateConfirmPIN(updatedPIN))
-                
-                if updatedPIN.count == 6 {
-                    actions.append(.validatePINs)
-                }
-            }
-            
-            return actions
+            return handleNumberTapped(number)
             
         case .deleteTapped:
-            var actions: [Action] = []
+            return handleDeleteTapped()
             
-            if isError {
-                actions.append(.resetError)
-            }
-            
-            if currentState == .initial && !firstPIN.isEmpty {
-                actions.append(.updateFirstPIN(String(firstPIN.dropLast())))
-            } else if currentState == .confirmation && !confirmPIN.isEmpty {
-                actions.append(.updateConfirmPIN(String(confirmPIN.dropLast())))
-            }
-            
-            return actions
+        case .confirmPIN:
+            return [.verifyPIN]
         }
     }
     
     public func perform(_ action: Action) async throws {
         switch action {
-        case .updateFirstPIN(let pin):
-            try await updateFirstPIN(pin)
-        case .updateConfirmPIN(let pin):
-            try await updateConfirmPIN(pin)
-        case .proceedToConfirmation:
-            // 지연 시간은 async sleep으로 구현
-            try await Task.sleep(nanoseconds: 300_000_000) // 0.3초
-            await proceedToConfirmation()
-        case .validatePINs:
-            // 지연 시간은 async sleep으로 구현
-            try await Task.sleep(nanoseconds: 300_000_000) // 0.3초
-            await validatePINs()
-        case .resetError:
-            await resetError()
+        case .updatePIN(let newPin):
+            updatePIN(newPin)
+        case .verifyPIN:
+            try await verifyPIN()
+        case .saveAndConfirmPIN:
+            try await saveAndConfirmPIN()
+        case .resetState:
+            resetState()
+        case .showError(let message):
+            showError(message: message)
+        case .setupComplete:
+            completeSetup()
         }
     }
     
     public func handleError(_ error: Error) async {
-        await showError(message: "오류가 발생했습니다: \(error.localizedDescription)")
-    }
-
-// MARK: - 내부 메서드
-    func updateFirstPIN(_ pin: String) async throws {
-        firstPIN = pin
+        showError(message: "오류가 발생했습니다: \(error.localizedDescription)")
     }
     
-    func updateConfirmPIN(_ pin: String) async throws {
-        confirmPIN = pin
-    }
-    
-    func proceedToConfirmation() async {
-        withAnimation {
-            currentState = .confirmation
+    // MARK: - 내부 메서드
+    private func handleNumberTapped(_ number: Int) -> [Action] {
+        guard !isError else {
+            return [.resetState]
         }
-    }
-    
-    func validatePINs() async {
-        if firstPIN == confirmPIN {
-            await savePIN()
+        
+        if currentState == .enterPIN {
+            guard pin.count < 6 else { return [] }
+            return [.updatePIN(pin + "\(number)")]
         } else {
-            await showError(message: "PIN 번호가 일치하지 않습니다. 다시 시도해주세요.")
+            guard confirmPin.count < 6 else { return [] }
+            return [.updatePIN(confirmPin + "\(number)")]
         }
     }
     
-    func savePIN() async {
-        // 실제로는 아래와 같이 구현 예정
-        // do {
-        //     let success = try await authManager.savePIN(firstPIN)
-        //     if success {
-        //         withAnimation {
-        //             currentState = .success
-        //         }
-        //     } else {
-        //         await showError(message: "PIN 저장에 실패했습니다. 다시 시도해주세요.")
-        //     }
-        // } catch {
-        //     await showError(message: "PIN 저장 중 오류가 발생했습니다: \(error.localizedDescription)")
-        // }
-    }
-    
-    func showError(message: String) async {
-        errorMessage = message
-        withAnimation {
-            isError = true
-            currentState = .error
-            confirmPIN = ""
+    private func handleDeleteTapped() -> [Action] {
+        guard !isError else {
+            return [.resetState]
+        }
+        
+        if currentState == .enterPIN {
+            guard !pin.isEmpty else { return [] }
+            return [.updatePIN(String(pin.dropLast()))]
+        } else {
+            guard !confirmPin.isEmpty else { return [] }
+            return [.updatePIN(String(confirmPin.dropLast()))]
         }
     }
     
-    func resetError() async {
-        withAnimation {
+    private func updatePIN(_ newPin: String) {
+        if currentState == .enterPIN {
+            pin = newPin
+            
+            if pin.count == 6 {
+                switchToConfirmState()
+            }
+        } else {
+            confirmPin = newPin
+            
+            if confirmPin.count == 6 {
+                Task {
+                    try? await perform(.verifyPIN)
+                }
+            }
+        }
+    }
+    
+    private func switchToConfirmState() {
+        currentState = .confirmPIN
+    }
+    
+    private func verifyPIN() async throws {
+        guard pin == confirmPin else {
+            throw PINError.mismatch
+        }
+        
+        try await perform(.saveAndConfirmPIN)
+    }
+    
+    private func saveAndConfirmPIN() async throws {
+        let result = await savePINUseCase.execute(pin: pin)
+        
+        switch result {
+        case .success:
+            currentState = .success
+            
+            // 1.5초 후 설정 완료 콜백 호출
+            try await Task.sleep(nanoseconds: 1_500_000_000)
+            try await perform(.setupComplete)
+        case .failure:
+            throw PINError.saveFailed
+        }
+    }
+    
+    private func resetState() {
+        if isError {
             isError = false
             errorMessage = ""
+            
+            if currentState == .confirmPIN {
+                confirmPin = ""
+            } else {
+                pin = ""
+            }
         }
     }
     
-    // MARK: - 공개 인터페이스
-    public func onNumberTapped(_ number: Int) {
-        send(.numberTapped(number))
+    private func showError(message: String) {
+        errorMessage = message
+        isError = true
+        
+        if currentState == .confirmPIN {
+            confirmPin = ""
+        }
     }
     
-    public func onDeleteTapped() {
-        send(.deleteTapped)
+    private func completeSetup() {
+        onSetupComplete()
+    }
+}
+
+// MARK: - 오류 정의
+enum PINError: Error {
+    case invalidFormat
+    case mismatch
+    case saveFailed
+    
+    var localizedDescription: String {
+        switch self {
+        case .invalidFormat:
+            return "PIN은 6자리 숫자여야 합니다."
+        case .mismatch:
+            return "입력한 PIN 번호가 일치하지 않습니다."
+        case .saveFailed:
+            return "PIN 저장에 실패했습니다."
+        }
     }
 }

@@ -9,6 +9,7 @@
 import UIKit
 import SwiftUI
 import SharedModule
+import AuthFeature
 
 /// 설정 코디네이터 구현
 public final class SettingsCoordinator: Coordinator {
@@ -37,6 +38,9 @@ public final class SettingsCoordinator: Coordinator {
         viewModel.onNotificationCenterTapped = { [weak self] in
             self?.showNotificationCenter()
         }
+        viewModel.onSecuritySettingsTapped = { [weak self] in
+            self?.showSecuritySettings()
+        }
         
         // SwiftUI 뷰를 UIKit 호스팅 컨트롤러로 래핑
         let settingsView = SettingsView(viewModel: viewModel)
@@ -55,6 +59,51 @@ public final class SettingsCoordinator: Coordinator {
         navigationController.setViewControllers([viewController], animated: true)
     }
     
+    private func showSecuritySettings() {
+        // 보안 설정 화면 뷰모델 생성
+        let viewModel = diContainer.makeSecuritySettingsViewModel(
+            onPINSetupTapped: { [weak self] in
+                self?.showPINSetup()
+            },
+            onPINChangeTapped: { [weak self] in
+                self?.showPINChange()
+            }
+        )
+        
+        // SwiftUI 뷰를 UIKit 호스팅 컨트롤러로 래핑
+        let securitySettingsView = SecuritySettingsView(viewModel: viewModel as? SecuritySettingsViewModel)
+        let viewController = UIHostingController(rootView: securitySettingsView)
+        viewController.title = "보안 설정"
+        
+        navigationController.pushViewController(viewController, animated: true)
+    }
+    
+    private func showPINSetup() {
+        // AuthModule의 PIN 설정 화면 사용
+        // AuthDIContainer에 접근하기 위해 AppCoordinator에서 메서드 호출 필요
+        let authDIContainer = diContainer.authDIContainer()
+        
+        let pinSetupViewModel = authDIContainer.makePINSetupViewModel(
+            onSetupComplete: { [weak self] in
+                // PIN 설정 완료 후 이전 화면으로 돌아가기
+                self?.navigationController.popViewController(animated: true)
+            }
+        )
+        
+        // SwiftUI 뷰를 UIKit 호스팅 컨트롤러로 래핑
+        let pinSetupView = PINSetupView(viewModel: pinSetupViewModel as? PINSetupViewModel)
+        let viewController = UIHostingController(rootView: pinSetupView)
+        viewController.title = "PIN 설정"
+        
+        navigationController.pushViewController(viewController, animated: true)
+    }
+    
+    private func showPINChange() {
+        // PIN 변경 화면은 기존 PIN 확인 후 새로운 PIN을 설정하는 과정
+        // 현재는 단순히 PIN 설정화면으로 이동 (실제 구현에서는 별도 화면 필요)
+        showPINSetup()
+    }
+    
     private func showNotificationCenter() {
         // 알림 센터 화면 전환
         let notificationCenterView = NotificationCenterView()
@@ -70,106 +119,3 @@ public final class SettingsCoordinator: Coordinator {
         delegate?.settingsCoordinatorDidFinish()
     }
 }
-
-// MARK: - 뷰모델 임시 구현
-// 실제 구현에서는 별도 파일로 분리되어야 함
-
-class SettingsViewModel: ObservableObject {
-    var onLogoutButtonTapped: (() -> Void)?
-    var onNotificationCenterTapped: (() -> Void)?
-    
-    func handleLogout() {
-        onLogoutButtonTapped?()
-    }
-    
-    func handleNotificationCenterTap() {
-        onNotificationCenterTapped?()
-    }
-}
-
-// MARK: - 뷰 임시 구현
-// 실제 구현에서는 별도 파일로 분리되어야 함
-
-struct SettingsView: View {
-    @ObservedObject var viewModel: SettingsViewModel
-    
-    var body: some View {
-        List {
-            Section(header: Text("계정")) {
-                Button(action: {}) {
-                    SettingsRow(title: "내 프로필", icon: "person.fill")
-                }
-                
-                Button(action: {}) {
-                    SettingsRow(title: "보안 설정", icon: "lock.fill")
-                }
-            }
-            
-            Section(header: Text("알림")) {
-                Button(action: {
-                    viewModel.handleNotificationCenterTap()
-                }) {
-                    SettingsRow(title: "알림 센터", icon: "bell.fill")
-                }
-                
-                Button(action: {}) {
-                    SettingsRow(title: "알림 설정", icon: "bell.badge.fill")
-                }
-            }
-            
-            Section(header: Text("앱 정보")) {
-                Button(action: {}) {
-                    SettingsRow(title: "앱 버전", icon: "info.circle.fill", value: "1.0.0")
-                }
-                
-                Button(action: {}) {
-                    SettingsRow(title: "고객센터", icon: "questionmark.circle.fill")
-                }
-                
-                Button(action: {}) {
-                    SettingsRow(title: "이용약관", icon: "doc.text.fill")
-                }
-            }
-            
-            Section {
-                Button(action: {
-                    viewModel.handleLogout()
-                }) {
-                    Text("로그아웃")
-                        .foregroundColor(.red)
-                        .frame(maxWidth: .infinity, alignment: .center)
-                }
-            }
-        }
-        .listStyle(InsetGroupedListStyle())
-    }
-}
-
-struct SettingsRow: View {
-    let title: String
-    let icon: String
-    var value: String? = nil
-    
-    var body: some View {
-        HStack {
-            Image(systemName: icon)
-                .foregroundColor(.blue)
-                .frame(width: 30, height: 30)
-            
-            Text(title)
-                .foregroundColor(.primary)
-            
-            Spacer()
-            
-            if let value = value {
-                Text(value)
-                    .foregroundColor(.gray)
-            } else {
-                Image(systemName: "chevron.right")
-                    .font(.caption)
-                    .foregroundColor(.gray)
-            }
-        }
-        .padding(.vertical, 4)
-    }
-} 

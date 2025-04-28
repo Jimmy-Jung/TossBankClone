@@ -11,7 +11,6 @@ import SwiftUI
 import DomainModule
 import DataModule
 import SharedModule
-import AuthenticationModule
 import NetworkModule
 
 /// 계좌 코디네이터 구현

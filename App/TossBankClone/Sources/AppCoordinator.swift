@@ -1,4 +1,11 @@
-import Foundation
+//
+//  AppDIContainer.swift
+//  TossBackClone
+//
+//  Created by 정준영 on 2025/4/27.
+//  Copyright © 2025 TossBank. All rights reserved.
+//
+
 import UIKit
 import DomainModule
 import AuthFeature
@@ -6,15 +13,15 @@ import AccountFeature
 import SettingsFeature
 import TransferFeature
 import NetworkModule
-import AuthenticationModule
 import SharedModule
+import AuthenticationModule
 
 final class AppDIContainer: AppDIContainerProtocol {
     
     // MARK: - 속성
-    private let authenticationManager: AuthenticationManagerProtocol
     public let environment: AppEnvironment
     public let networkService: NetworkServiceProtocol
+    private let authenticationManager: AuthenticationManagerProtocol
     private let baseURL: URL
     
     // MARK: - 초기화
@@ -30,12 +37,12 @@ final class AppDIContainer: AppDIContainerProtocol {
         case .production:
             // 프로덕션 환경에서는 실제 서비스 사용
             self.networkService = NetworkService()
-            self.authenticationManager = AuthenticationManager()
+            self.authenticationManager = AuthenticationManager.shared
             
         case .test:
             // 테스트 환경에서는 모의 서비스 사용
             self.networkService = MockNetworkService()
-            self.authenticationManager = AuthenticationManager()
+            self.authenticationManager = AuthenticationManager.shared
         }
     }
 
@@ -44,6 +51,7 @@ final class AppDIContainer: AppDIContainerProtocol {
     
     func authDIContainer() -> AuthDIContainerProtocol {
         return AuthDIContainer(
+            environment: environment,
             authenticationManager: authenticationManager,
             networkService: networkService,
             baseURL: baseURL
@@ -53,7 +61,6 @@ final class AppDIContainer: AppDIContainerProtocol {
     func accountDIContainer() -> AccountDIContainerProtocol {
         return AccountDIContainer(
             environment: environment,
-            authenticationManager: authenticationManager,
             networkService: networkService,
             baseURL: baseURL
         )
@@ -69,8 +76,8 @@ final class AppDIContainer: AppDIContainerProtocol {
     
     func settingsDIContainer() -> SettingsDIContainerProtocol {
         return SettingsDIContainer(
-            networkService: networkService,
-            baseURL: baseURL
+            authenticationManager: authenticationManager,
+            appDIContainer: self
         )
     }
 }

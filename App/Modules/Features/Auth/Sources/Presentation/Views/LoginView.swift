@@ -7,7 +7,6 @@
 //
 
 import SwiftUI
-import AuthenticationModule
 import SharedModule
 
 struct LoginView: View {
@@ -34,14 +33,20 @@ struct LoginView: View {
             
             // 입력 필드
             VStack(spacing: 16) {
-                TextField("이메일", text: $viewModel.email)
+                TextField("이메일", text: Binding(
+                    get: { viewModel.email },
+                    set: { viewModel.send(.updateEmail($0)) }
+                ))
                     .keyboardType(.emailAddress)
                     .autocapitalization(.none)
                     .padding()
                     .background(Color.gray.opacity(0.1))
                     .cornerRadius(10)
                 
-                SecureField("비밀번호", text: $viewModel.password)
+                SecureField("비밀번호", text: Binding(
+                    get: { viewModel.password },
+                    set: { viewModel.send(.updatePassword($0)) }
+                ))
                     .padding()
                     .background(Color.gray.opacity(0.1))
                     .cornerRadius(10)

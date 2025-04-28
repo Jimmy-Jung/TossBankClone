@@ -7,24 +7,52 @@
 //
 
 import Foundation
-import NetworkModule
+import AuthenticationModule
+import DomainModule
 import SharedModule
 
+// MARK: - 설정 모듈 DIContainer 구현
 public final class SettingsDIContainer: SettingsDIContainerProtocol {
-    // MARK: - 속성
-    private let networkService: NetworkServiceProtocol
-    private let baseURL: URL
     
-    // MARK: - 초기화
+    private let authenticationManager: AuthenticationManagerProtocol
+    private let appDIContainer: AppDIContainerProtocol
+    
     public init(
-        networkService: NetworkServiceProtocol,
-        baseURL: URL
+        authenticationManager: AuthenticationManagerProtocol,
+        appDIContainer: AppDIContainerProtocol
     ) {
-        self.networkService = networkService
-        self.baseURL = baseURL
+        self.authenticationManager = authenticationManager
+        self.appDIContainer = appDIContainer
     }
+    
+    // MARK: - AuthDIContainer 접근
+    public func authDIContainer() -> AuthDIContainerProtocol {
+        return appDIContainer.authDIContainer()
+    }
+    
+    // MARK: - ViewModels
+    public func makeSecuritySettingsViewModel(
+        onPINSetupTapped: (() -> Void)?,
+        onPINChangeTapped: (() -> Void)?
+    ) -> any AsyncViewModel {
+        return SecuritySettingsViewModel(
+            checkPINExistsUseCase: makeCheckPINExistsUseCase(),
+            onPINSetupTapped: onPINSetupTapped,
+            onPINChangeTapped: onPINChangeTapped,
+            onPasswordChangeTapped: nil
+        )
+    }
+    
+    public func makePINSetupViewModel(
+        onSetupComplete: @escaping () -> Void
+    ) -> any AsyncViewModel {
+        return authDIContainer()
+            .makePINSetupViewModel(onSetupComplete: onSetupComplete)
 
-    private func createAPIClient() -> APIClient {
-        return NetworkAPIClient(networkService: networkService, baseURL: baseURL)
+    }
+    
+    // MARK: - UseCases
+    public func makeCheckPINExistsUseCase() -> CheckPINExistsUseCaseProtocol {
+        return CheckPINExistsUseCase(authenticationManager: authenticationManager)
     }
 }

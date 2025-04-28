@@ -18,6 +18,29 @@ public protocol AuthenticationManagerProtocol: AnyObject {
     
     /// 회원가입 메서드
     func register(email: String, password: String, name: String) async throws -> Bool
+    
+    /// 생체 인증 메서드
+    /// - Returns: 인증 결과
+    func authenticateBiometric() async -> Result<Bool, AuthError>
+    
+    /// PIN 저장 메서드
+    /// - Parameter pin: 저장할 PIN
+    func savePIN(_ pin: String) -> Result<Void, AuthError>
+    
+    /// PIN 검증 메서드
+    /// - Parameter pin: 검증할 PIN
+    func validatePIN(_ pin: String) -> Result<Bool, AuthError>
+    
+    /// PIN 설정 여부 확인
+    /// - Returns: PIN 설정 여부
+    func isPINSet() -> Bool
+    
+    /// PIN 변경 메서드
+    /// - Parameters:
+    ///   - oldPin: 기존 PIN
+    ///   - newPin: 새 PIN
+    ///   - Returns: PIN 변경 결과
+    func changePIN(oldPin: String, newPin: String) -> Result<Void, AuthError>
 }
 
 /// 인증 관리자 구현
@@ -35,7 +58,7 @@ public final class AuthenticationManager: AuthenticationManagerProtocol {
     private let userIdKey = "app.auth.userId"
     
     // MARK: - 초기화
-    public init() {}
+    private init() {}
     
     // MARK: - AuthenticationManagerProtocol 구현
     
@@ -180,7 +203,10 @@ public final class AuthenticationManager: AuthenticationManagerProtocol {
         ]
         
         let status = SecItemCopyMatching(query as CFDictionary, nil)
-        return status == errSecSuccess
+        let isPINSet = status == errSecSuccess
+        
+        print("🔑 AuthenticationManager.isPINSet() 호출 결과: \(isPINSet) (Status: \(status))")
+        return isPINSet
     }
     
     public func changePIN(oldPin: String, newPin: String) -> Result<Void, AuthError> {
