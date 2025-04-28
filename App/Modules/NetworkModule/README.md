@@ -1,392 +1,279 @@
 # NetworkModule
 
-NetworkModule은 iOS 앱에서 네트워크 요청을 쉽고 유연하게 처리할 수 있는 모듈입니다. 플러그인 기반 아키텍처를 통해 확장성이 뛰어나며, 다양한 네트워크 요청 시나리오에 대응할 수 있습니다.
+## 모듈 개요
 
-## 특징
+NetworkModule은 Toss Bank Clone 애플리케이션의 네트워크 통신을 담당하는 모듈입니다. 백엔드 서버와의 통신, 에러 처리, 캐싱, 로깅, 재시도 등의 네트워크 관련 기능을 제공합니다. 모듈화된 플러그인 시스템을 통해 유연하고 확장 가능한 네트워크 계층을 구현합니다.
 
-- ✅ **Swift Concurrency** 지원 (`async/await`)
-- ✅ 유연한 **플러그인 시스템**
-- ✅ 타입 안전한 **제네릭 API 엔드포인트**
-- ✅ 자동 **재시도 메커니즘**
-- ✅ **인증 토큰** 관리
-- ✅ 네트워크 **연결 상태** 처리
-- ✅ **로깅** 및 **캐싱** 지원
-- ✅ **업로드** 기능 지원
+## 아키텍처
+
+```mermaid
+graph TD
+    subgraph NetworkModule["NetworkModule"]
+        NetworkService["NetworkService"]
+        Core["Core"]
+        Plugins["Plugins"]
+        Errors["Errors"]
+        Utils["Utils"]
+    end
+    
+    Core --> Errors
+    NetworkService --> Core
+    NetworkService --> Plugins
+    Plugins --> Core
+    Utils --> Core
+    
+    subgraph Core["Core"]
+        APIClient["APIClient"]
+        APIRequest["APIRequest"]
+    end
+    
+    subgraph Plugins["Plugins"]
+        AuthPlugin["AuthPlugin"]
+        LoggingPlugin["LoggingPlugin"]
+        RetryPlugin["RetryPlugin"]
+        CachePlugin["CachePlugin"]
+        TimeoutPlugin["TimeoutPlugin"]
+        ConnectivityPlugin["ConnectivityPlugin"]
+    end
+    
+    subgraph External["외부 모듈"]
+        DataModule["DataModule"]
+    end
+    
+    DataModule -.-> NetworkService
+```
+
+## 의존성 관계
+
+- **의존하는 모듈**: 없음 (독립적인 모듈)
+- **의존받는 모듈**:
+  - DataModule: 네트워크 서비스를 사용하여 데이터 요청
 
 ## 폴더 구조
 
 ```
 NetworkModule/
 ├── Sources/
-│   ├── Core/                 # 핵심 API 인터페이스
-│   │   ├── Endpoint.swift    # 타입 안전한 엔드포인트 정의
-│   │   └── APIRequest.swift  # 기본 API 요청 인터페이스
-│   ├── Plugins/              # 네트워크 플러그인
-│   │   ├── NetworkPlugin.swift     # 플러그인 인터페이스
-│   │   ├── AuthPlugin.swift        # 인증 토큰 처리
-│   │   ├── ConnectivityPlugin.swift # 네트워크 연결 확인
-│   │   ├── RetryPlugin.swift       # 재시도 메커니즘
-│   │   ├── LoggingPlugin.swift     # 로깅
-│   │   ├── CachePlugin.swift       # 캐싱
-│   │   └── TimeoutPlugin.swift     # 타임아웃 관리
-│   ├── Errors/               # 오류 정의
-│   │   └── NetworkError.swift      # 네트워크 오류 열거형
-│   ├── Utils/                # 유틸리티 클래스
-│   │   └── NetworkReachability.swift # 네트워크 연결 상태 관리
-│   ├── API/                  # API 관련 클래스
-│   └── NetworkService.swift  # 주요 네트워크 서비스 클래스
-└── Tests/                    # 테스트 코드
-    └── NetworkTests/         # 단위 및 통합 테스트
+│   ├── Core/              - 핵심 네트워크 로직
+│   │   ├── APIClient.swift
+│   │   └── APIRequest.swift
+│   ├── Errors/            - 에러 정의 및 처리
+│   │   └── NetworkError.swift
+│   ├── Plugins/           - 네트워크 기능 확장을 위한 플러그인
+│   │   ├── NetworkPlugin.swift
+│   │   ├── AuthPlugin.swift
+│   │   ├── LoggingPlugin.swift
+│   │   ├── RetryPlugin.swift
+│   │   ├── CachePlugin.swift
+│   │   ├── TimeoutPlugin.swift
+│   │   └── ConnectivityPlugin.swift
+│   ├── Utils/             - 유틸리티 함수
+│   ├── NetworkService.swift  - 메인 네트워크 서비스
+│   └── MockNetworkService.swift - 테스트용 모의 서비스
+└── Tests/                 - 네트워크 모듈 테스트
+    └── NetworkTests/
 ```
 
-## 아키텍처
+## 주요 컴포넌트
 
-```mermaid
-classDiagram
-    class NetworkServiceProtocol {
-        <<interface>>
-        +request(Endpoint) Promise
-        +upload(Endpoint, Data, String) Promise
-    }
-    
-    class NetworkService {
-        -baseURL: URL
-        -session: URLSession
-        -plugins: [NetworkPlugin]
-        -reachability: NetworkReachability
-        +init(baseURL, session, plugins, reachability)
-        +request(Endpoint) Promise
-        +upload(Endpoint, Data, String) Promise
-    }
-    
-    class NetworkPlugin {
-        <<interface>>
-        +prepare(URLRequest) Promise
-        +process(URLRequest, HTTPURLResponse, Data) Promise
-    }
-    
-    class Endpoint~T~ {
-        +path: String
-        +method: HTTPMethod
-        +headers: [String: String]?
-        +queryParameters: [String: String]?
-        +requestBody: RequestBody
-        +requiresAuth: Bool
-        +asURLRequest(baseURL) URLRequest
-    }
-    
-    class RequestBody {
-        <<enumeration>>
-        +encodable(Encodable)
-        +dictionary([String: Any])
-        +none
-    }
-    
-    class NetworkError {
-        <<enumeration>>
-        +invalidURL
-        +invalidResponse
-        +httpError(statusCode, data)
-        +connectionError
-        +timeoutError
-        +offline
-        +isRetryable: Bool
-        +userMessage: String
-    }
-    
-    class NetworkReachability {
-        <<interface>>
-        +isConnected: Bool
-    }
-    
-    class Logger {
-        <<interface>>
-        +logRequest(URLRequest)
-        +logResponse(HTTPURLResponse, Data)
-    }
-    
-    class ConsoleLogger {
-        -logLevel: LogLevel
-        +init(logLevel)
-        +logRequest(URLRequest)
-        +logResponse(HTTPURLResponse, Data)
-    }
-    
-    NetworkServiceProtocol <|.. NetworkService
-    NetworkService --> Endpoint : uses
-    NetworkService --> NetworkPlugin : uses
-    NetworkService --> NetworkReachability : uses
-    NetworkService --> NetworkError : throws
-    Endpoint --> RequestBody : uses
-    
-    NetworkPlugin <|.. AuthPlugin
-    NetworkPlugin <|.. ConnectivityPlugin
-    NetworkPlugin <|.. RetryPlugin
-    NetworkPlugin <|.. LoggingPlugin
-    NetworkPlugin <|.. CachePlugin
-    NetworkPlugin <|.. TimeoutPlugin
-    
-    Logger <|.. ConsoleLogger
-    LoggingPlugin --> Logger : uses
-    
-    ConnectivityPlugin --> NetworkReachability : uses
-```
+### Core
 
-## 의존성 관계
+네트워크 통신의 핵심 구성 요소를 정의합니다.
 
-```mermaid
-graph TD
-    A[NetworkService] --> B[Endpoint]
-    A --> C[NetworkPlugin]
-    A --> D[NetworkReachability]
-    A --> E[NetworkError]
-    B --> L[RequestBody]
-    
-    C --> F[AuthPlugin]
-    C --> G[ConnectivityPlugin]
-    C --> H[RetryPlugin]
-    C --> I[LoggingPlugin]
-    C --> J[CachePlugin]
-    C --> K[TimeoutPlugin]
-    
-    I --> M[Logger]
-    M --> N[ConsoleLogger]
-    
-    G --> D
-    
-    subgraph Core
-        B
-        L
-    end
-    
-    subgraph Plugins
-        C
-        F
-        G
-        H
-        I
-        J
-        K
-    end
-    
-    subgraph Logging
-        M
-        N
-    end
-    
-    subgraph Errors
-        E
-    end
-    
-    subgraph Utils
-        D
-    end
-```
+#### APIRequest
 
-## 사용 예제
-
-### 기본 사용법
+API 요청을 정의하는 프로토콜입니다.
 
 ```swift
-// NetworkService 인스턴스 생성
-let baseURL = URL(string: "https://api.example.com")!
-let networkService = NetworkService(baseURL: baseURL)
-
-// 엔드포인트 정의
-struct User: Decodable {
-    let id: Int
-    let name: String
-    let email: String
+protocol APIRequest {
+    associatedtype Response: Decodable
+    
+    var path: String { get }
+    var method: HTTPMethod { get }
+    var headers: [String: String]? { get }
+    var queryParameters: [String: String]? { get }
+    var body: Data? { get }
 }
 
-let userEndpoint = Endpoint<User>(path: "/users/1")
-
-// 비동기 요청 수행
-do {
-    let user = try await networkService.request(userEndpoint)
-    print("사용자 정보: \(user.name), \(user.email)")
-} catch {
-    print("오류 발생: \(error)")
+extension APIRequest {
+    var headers: [String: String]? { return nil }
+    var queryParameters: [String: String]? { return nil }
+    var body: Data? { return nil }
 }
 ```
 
-### 플러그인 추가
+#### APIClient
+
+실제 네트워크 요청을 수행하는 클라이언트입니다.
 
 ```swift
-// 로깅 플러그인 추가 (기본 ConsoleLogger 사용)
-let loggingPlugin = LoggingPlugin(logLevel: .body)
-
-// 커스텀 로거를 사용한 로깅 플러그인
-class MyCustomLogger: Logger {
-    func logRequest(_ request: URLRequest) {
-        print("🚀 Request: \(request.url?.absoluteString ?? "")")
+class APIClient {
+    private let baseURL: URL
+    private let session: URLSession
+    
+    init(baseURL: URL, session: URLSession = .shared) {
+        self.baseURL = baseURL
+        self.session = session
     }
     
-    func logResponse(_ response: HTTPURLResponse, data: Data) {
-        print("📥 Response: \(response.statusCode)")
+    func request<T: APIRequest>(_ request: T) async throws -> T.Response {
+        // 네트워크 요청 구현
     }
 }
-
-let customLoggingPlugin = LoggingPlugin(logLevel: .body, logger: MyCustomLogger())
-
-// 재시도 플러그인 추가 (최대 3회 재시도, 지수 백오프 적용)
-let retryPlugin = RetryPlugin()
-
-// 인증 토큰 제공자 설정
-let authTokenProvider = { return KeychainService.getToken() }
-
-// 서비스 생성 시 플러그인 추가
-let networkService = NetworkService(
-    baseURL: baseURL,
-    authTokenProvider: authTokenProvider,
-    plugins: [customLoggingPlugin, retryPlugin]
-)
 ```
 
-### 파일 업로드
+### NetworkService
+
+다양한 플러그인을 조합하여 네트워크 요청을 처리하는 서비스입니다.
 
 ```swift
-// 이미지 데이터 준비
-let imageData = UIImage(named: "profile")?.jpegData(compressionQuality: 0.8) ?? Data()
-
-// 업로드 엔드포인트 정의
-let uploadEndpoint = Endpoint<UploadResponse>(path: "/upload", method: .POST)
-
-// 업로드 요청
-do {
-    let response = try await networkService.upload(
-        to: uploadEndpoint, 
-        data: imageData, 
-        mimeType: "image/jpeg"
-    )
-    print("업로드 완료: \(response)")
-} catch {
-    print("업로드 실패: \(error)")
-}
-```
-
-### 고급 엔드포인트 설정
-
-```swift
-// 메서드 체이닝을 통한 엔드포인트 설정
-let searchEndpoint = Endpoint<SearchResults>(path: "/search")
-    .method(.get)
-    .addQueryParameters([
-        "q": "Swift",
-        "page": "1",
-        "limit": "20"
-    ])
-    .addHeaders([
-        "X-API-Key": "your-api-key"
-    ])
-    .timeout(60.0)
-    .cachePolicy(.returnCacheDataElseLoad)
-
-// 요청 수행
-let results = try await networkService.request(searchEndpoint)
-```
-
-### POST 요청 보내기
-
-```swift
-// 요청 바디 모델
-struct CreateUserRequest: Encodable {
-    let name: String
-    let email: String
-    let age: Int
-}
-
-// POST 엔드포인트 설정
-let createUserEndpoint = Endpoint<User>(path: "/users", method: .POST)
-    .body(CreateUserRequest(
-        name: "홍길동",
-        email: "hong@example.com",
-        age: 30
-    ))
-
-// 요청 수행
-let newUser = try await networkService.request(createUserEndpoint)
-```
-
-## 커스텀 플러그인 만들기
-
-NetworkPlugin 프로토콜을 구현하여 자신만의 플러그인을 만들 수 있습니다:
-
-```swift
-class MyCustomPlugin: NetworkPlugin {
-    func prepare(_ request: inout URLRequest) async throws {
-        // 요청 전처리 로직
-        request.setValue("Custom-Value", forHTTPHeaderField: "X-Custom-Header")
+class NetworkService {
+    private let apiClient: APIClient
+    private let plugins: [NetworkPlugin]
+    
+    init(baseURL: URL, plugins: [NetworkPlugin] = []) {
+        self.apiClient = APIClient(baseURL: baseURL)
+        self.plugins = plugins
     }
     
-    func process(_ request: URLRequest, _ response: HTTPURLResponse, _ data: Data) async throws {
-        // 응답 후처리 로직
-        guard response.statusCode != 403 else {
-            throw NetworkError.unauthorized
+    func request<T: APIRequest>(_ request: T) async throws -> T.Response {
+        // 플러그인을 통한 요청 전처리
+        var modifiedRequest = request
+        for plugin in plugins {
+            modifiedRequest = try await plugin.prepare(request: modifiedRequest)
         }
-    }
-}
-
-// 플러그인 사용
-let networkService = NetworkService(
-    baseURL: baseURL,
-    plugins: [MyCustomPlugin()]
-)
-```
-
-## 커스텀 로거 만들기
-
-Logger 프로토콜을 구현하여 자신만의 로거를 만들 수 있습니다:
-
-```swift
-class FileLogger: Logger {
-    private let fileURL: URL
-    
-    init(fileURL: URL) {
-        self.fileURL = fileURL
-    }
-    
-    func logRequest(_ request: URLRequest) {
-        let logMessage = "Request: \(request.httpMethod ?? "GET") \(request.url?.absoluteString ?? "")\n"
-        appendToLogFile(logMessage)
-    }
-    
-    func logResponse(_ response: HTTPURLResponse, data: Data) {
-        let logMessage = "Response: \(response.statusCode) \(response.url?.absoluteString ?? "")\n"
-        appendToLogFile(logMessage)
-    }
-    
-    private func appendToLogFile(_ message: String) {
-        if let data = message.data(using: .utf8) {
-            if FileManager.default.fileExists(atPath: fileURL.path) {
-                if let fileHandle = try? FileHandle(forWritingTo: fileURL) {
-                    fileHandle.seekToEndOfFile()
-                    fileHandle.write(data)
-                    fileHandle.closeFile()
-                }
-            } else {
-                try? data.write(to: fileURL)
+        
+        // 실제 요청 수행
+        do {
+            let response = try await apiClient.request(modifiedRequest)
+            
+            // 플러그인을 통한 응답 후처리
+            var processedResponse = response
+            for plugin in plugins {
+                processedResponse = try await plugin.process(response: processedResponse, for: modifiedRequest)
             }
+            
+            return processedResponse
+        } catch {
+            // 플러그인을 통한 에러 처리
+            var processedError = error
+            for plugin in plugins {
+                processedError = try await plugin.handle(error: processedError, for: modifiedRequest)
+            }
+            throw processedError
         }
     }
 }
-
-// 파일 로거 사용
-let logFileURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!.appendingPathComponent("network.log")
-let fileLogger = FileLogger(fileURL: logFileURL)
-let loggingPlugin = LoggingPlugin(logLevel: .body, logger: fileLogger)
 ```
 
-## 테스트
+### Plugins
 
-NetworkModule은 종합적인 테스트 슈트를 제공합니다:
+네트워크 기능을 확장하는 플러그인 시스템입니다.
 
-- `NetworkServiceTests`: 기본 요청 및 업로드 기능 테스트
-- `EndpointTests`: 엔드포인트 생성 및 구성 테스트
-- `RetryPluginTests`: 재시도 메커니즘 테스트
-- `NetworkPluginTests`: 다양한 플러그인 테스트
-- `NetworkModuleIntegrationTests`: 모듈 통합 테스트
+```swift
+protocol NetworkPlugin {
+    func prepare<T: APIRequest>(request: T) async throws -> T
+    func process<T: APIRequest>(response: T.Response, for request: T) async throws -> T.Response
+    func handle<T: APIRequest>(error: Error, for request: T) async throws -> Error
+}
 
-## 라이센스
+// 기본 구현 제공
+extension NetworkPlugin {
+    func prepare<T: APIRequest>(request: T) async throws -> T { return request }
+    func process<T: APIRequest>(response: T.Response, for request: T) async throws -> T.Response { return response }
+    func handle<T: APIRequest>(error: Error, for request: T) async throws -> Error { return error }
+}
+```
 
-이 라이브러리는 MIT 라이센스 하에 사용할 수 있습니다. 
+주요 플러그인:
+- AuthPlugin: 인증 토큰 관리
+- LoggingPlugin: 요청/응답 로깅
+- RetryPlugin: 실패한 요청 재시도
+- CachePlugin: 응답 캐싱
+- TimeoutPlugin: 타임아웃 관리
+- ConnectivityPlugin: 네트워크 연결 상태 확인
+
+### Errors
+
+네트워크 오류를 정의하고 처리합니다.
+
+```swift
+enum NetworkError: Error {
+    case invalidRequest
+    case invalidResponse
+    case httpError(statusCode: Int, data: Data?)
+    case connectionError
+    case decodingError(Error)
+    case unauthorized
+    case timeout
+    case serverError
+    case unknown(Error)
+}
+```
+
+## 사용 방법
+
+1. 네트워크 서비스 초기화:
+
+```swift
+let baseURL = URL(string: "https://api.example.com")!
+let networkService = NetworkService(
+    baseURL: baseURL,
+    plugins: [
+        AuthPlugin(tokenProvider: tokenProvider),
+        LoggingPlugin(),
+        RetryPlugin(maxRetries: 3),
+        CachePlugin(),
+        TimeoutPlugin(timeout: 30),
+        ConnectivityPlugin()
+    ]
+)
+```
+
+2. API 요청 정의:
+
+```swift
+enum UserAPIRequest {
+    case getUser(id: String)
+}
+
+extension UserAPIRequest: APIRequest {
+    typealias Response = UserDTO
+    
+    var path: String {
+        switch self {
+        case .getUser(let id):
+            return "/users/\(id)"
+        }
+    }
+    
+    var method: HTTPMethod {
+        return .get
+    }
+}
+```
+
+3. 요청 실행:
+
+```swift
+do {
+    let userDTO = try await networkService.request(UserAPIRequest.getUser(id: "123"))
+    // userDTO 처리
+} catch let error as NetworkError {
+    // 네트워크 에러 처리
+} catch {
+    // 기타 에러 처리
+}
+```
+
+## 구현 원리
+
+NetworkModule은 다음 설계 원칙에 따라 구현되었습니다:
+
+1. **모듈성**: 각 네트워크 기능은 독립적인 플러그인으로 구현
+2. **확장성**: 새로운 플러그인을 추가하여 기능 확장 가능
+3. **테스트 용이성**: 모의 구현(MockNetworkService)을 통한 테스트 지원
+4. **에러 처리**: 체계적인 에러 타입과 처리 메커니즘 제공
+5. **비동기 처리**: Swift의 최신 async/await 패턴 활용
+
+이러한 원칙을 통해 안정적이고 유지보수 가능한 네트워크 계층을 구현할 수 있습니다.
