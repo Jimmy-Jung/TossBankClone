@@ -62,8 +62,8 @@ graph TD
     end
 
     %% 스타일링
-    classDef featureModule fill:#f9f,stroke:#333,stroke-width:2px
-    classDef coreModule fill:#bbf,stroke:#333,stroke-width:2px
+    classDef featureModule fill:#d8a0e0,stroke:#555,stroke-width:2px
+    classDef coreModule fill:#a0c8e0,stroke:#555,stroke-width:2px
     
     class FM1,FM2,FM3,FM4 featureModule
     class CM1,CM2,CM3,CM4,CM5,CM6 coreModule
@@ -114,10 +114,10 @@ flowchart LR
     end
     
     %% 스타일링
-    classDef app fill:#ffd700,stroke:#333,stroke-width:2px
-    classDef presentation fill:#ffcccc,stroke:#333,stroke-width:2px
-    classDef domain fill:#ccffcc,stroke:#333,stroke-width:2px
-    classDef data fill:#ccccff,stroke:#333,stroke-width:2px
+    classDef app fill:#e0c078,stroke:#555,stroke-width:2px
+    classDef presentation fill:#e0a0a0,stroke:#555,stroke-width:2px
+    classDef domain fill:#a0e0a0,stroke:#555,stroke-width:2px
+    classDef data fill:#a0c8e0,stroke:#555,stroke-width:2px
     
     class A1,A2 app
     class P1,P2 presentation
@@ -288,9 +288,9 @@ flowchart TB
         end
     end
     
-    classDef client fill:#f9f,stroke:#333,stroke-width:2px
-    classDef service fill:#bbf,stroke:#333,stroke-width:2px
-    classDef component fill:#bfb,stroke:#333,stroke-width:2px
+    classDef client fill:#d8a0e0,stroke:#555,stroke-width:2px
+    classDef service fill:#a0c8e0,stroke:#555,stroke-width:2px
+    classDef component fill:#a0e0a0,stroke:#555,stroke-width:2px
     
     class APIClient client
     class NetworkService service
@@ -386,13 +386,13 @@ flowchart LR
         View["View<br>(SwiftUI)"] --> Input
     end
     
-    classDef input fill:#ffcc99,stroke:#333,stroke-width:2px
-    classDef transform fill:#99ccff,stroke:#333,stroke-width:2px
-    classDef actions fill:#ffcc66,stroke:#333,stroke-width:2px
-    classDef perform fill:#99aaff,stroke:#333,stroke-width:2px
-    classDef error fill:#ff9999,stroke:#333,stroke-width:2px
-    classDef state fill:#99ffcc,stroke:#333,stroke-width:2px
-    classDef view fill:#cc99ff,stroke:#333,stroke-width:2px
+    classDef input fill:#e0b088,stroke:#555,stroke-width:2px
+    classDef transform fill:#88b0e0,stroke:#555,stroke-width:2px
+    classDef actions fill:#e0c078,stroke:#555,stroke-width:2px
+    classDef perform fill:#8890e0,stroke:#555,stroke-width:2px
+    classDef error fill:#e08888,stroke:#555,stroke-width:2px
+    classDef state fill:#88e0b0,stroke:#555,stroke-width:2px
+    classDef view fill:#c088e0,stroke:#555,stroke-width:2px
     
     class Input input
     class Transform transform
