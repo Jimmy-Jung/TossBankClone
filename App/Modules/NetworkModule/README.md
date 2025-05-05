@@ -85,20 +85,28 @@ NetworkModule/
 API 요청을 정의하는 프로토콜입니다.
 
 ```swift
-protocol APIRequest {
+public protocol APIRequest {
     associatedtype Response: Decodable
     
     var path: String { get }
     var method: HTTPMethod { get }
-    var headers: [String: String]? { get }
+    var headers: HTTPHeaders? { get }
     var queryParameters: [String: String]? { get }
-    var body: Data? { get }
+    var requestBody: RequestBody { get }
+    var requiresAuth: Bool { get }
+    
+    func asURLRequest(baseURL: URL) throws -> URLRequest
 }
 
-extension APIRequest {
-    var headers: [String: String]? { return nil }
+public extension APIRequest {
+    var headers: HTTPHeaders? { return nil }
     var queryParameters: [String: String]? { return nil }
-    var body: Data? { return nil }
+    var requestBody: RequestBody { return .none }
+    var requiresAuth: Bool { return true }
+    
+    func asURLRequest(baseURL: URL) throws -> URLRequest {
+        // URLRequest 생성 로직
+    }
 }
 ```
 
@@ -107,17 +115,19 @@ extension APIRequest {
 실제 네트워크 요청을 수행하는 클라이언트입니다.
 
 ```swift
-class APIClient {
-    private let baseURL: URL
-    private let session: URLSession
+public protocol APIClient {
+    func send<T: APIRequest>(_ request: T) async throws -> T.Response
+}
+
+public final class NetworkAPIClient: APIClient {
+    private let networkService: NetworkServiceProtocol
     
-    init(baseURL: URL, session: URLSession = .shared) {
-        self.baseURL = baseURL
-        self.session = session
+    public init(networkService: NetworkServiceProtocol) {
+        self.networkService = networkService
     }
     
-    func request<T: APIRequest>(_ request: T) async throws -> T.Response {
-        // 네트워크 요청 구현
+    public func send<T: APIRequest>(_ request: T) async throws -> T.Response {
+        return try await networkService.request(request)
     }
 }
 ```
@@ -127,42 +137,40 @@ class APIClient {
 다양한 플러그인을 조합하여 네트워크 요청을 처리하는 서비스입니다.
 
 ```swift
-class NetworkService {
-    private let apiClient: APIClient
+public protocol NetworkServiceProtocol {
+    func request<R: APIRequest>(_ apiRequest: R) async throws -> R.Response
+    func upload<R: APIRequest>(_ apiRequest: R, data: Data, mimeType: String) async throws -> R.Response
+}
+
+public final class NetworkService: NetworkServiceProtocol {
+    private let baseURL: URL
+    private let session: URLSession
     private let plugins: [NetworkPlugin]
     
-    init(baseURL: URL, plugins: [NetworkPlugin] = []) {
-        self.apiClient = APIClient(baseURL: baseURL)
-        self.plugins = plugins
+    public init(baseURL: URL, 
+                session: URLSession = .shared,
+                plugins: [NetworkPlugin] = []) {
+        self.baseURL = baseURL
+        self.session = session
+        
+        // 기본 플러그인 설정 로직
+        var allPlugins = plugins
+        // 필요한 기본 플러그인 추가
+        self.plugins = allPlugins
     }
     
-    func request<T: APIRequest>(_ request: T) async throws -> T.Response {
-        // 플러그인을 통한 요청 전처리
-        var modifiedRequest = request
-        for plugin in plugins {
-            modifiedRequest = try await plugin.prepare(request: modifiedRequest)
-        }
-        
-        // 실제 요청 수행
-        do {
-            let response = try await apiClient.request(modifiedRequest)
-            
-            // 플러그인을 통한 응답 후처리
-            var processedResponse = response
-            for plugin in plugins {
-                processedResponse = try await plugin.process(response: processedResponse, for: modifiedRequest)
-            }
-            
-            return processedResponse
-        } catch {
-            // 플러그인을 통한 에러 처리
-            var processedError = error
-            for plugin in plugins {
-                processedError = try await plugin.handle(error: processedError, for: modifiedRequest)
-            }
-            throw processedError
-        }
+    public func request<R: APIRequest>(_ apiRequest: R) async throws -> R.Response {
+        let urlRequest = try apiRequest.asURLRequest(baseURL: baseURL)
+        return try await performRequest(urlRequest)
     }
+    
+    public func upload<R: APIRequest>(_ apiRequest: R, data: Data, mimeType: String) async throws -> R.Response {
+        var urlRequest = try apiRequest.asURLRequest(baseURL: baseURL)
+        // 업로드 설정 및 수행
+        return try await processResponse(...)
+    }
+    
+    // 내부 구현 메서드들...
 }
 ```
 
@@ -171,17 +179,9 @@ class NetworkService {
 네트워크 기능을 확장하는 플러그인 시스템입니다.
 
 ```swift
-protocol NetworkPlugin {
-    func prepare<T: APIRequest>(request: T) async throws -> T
-    func process<T: APIRequest>(response: T.Response, for request: T) async throws -> T.Response
-    func handle<T: APIRequest>(error: Error, for request: T) async throws -> Error
-}
-
-// 기본 구현 제공
-extension NetworkPlugin {
-    func prepare<T: APIRequest>(request: T) async throws -> T { return request }
-    func process<T: APIRequest>(response: T.Response, for request: T) async throws -> T.Response { return response }
-    func handle<T: APIRequest>(error: Error, for request: T) async throws -> Error { return error }
+public protocol NetworkPlugin {
+    func prepare(_ request: inout URLRequest) async throws
+    func process(_ request: URLRequest, _ response: HTTPURLResponse, _ data: Data) async throws
 }
 ```
 
@@ -198,14 +198,14 @@ extension NetworkPlugin {
 네트워크 오류를 정의하고 처리합니다.
 
 ```swift
-enum NetworkError: Error {
-    case invalidRequest
+public enum NetworkError: Error {
+    case invalidURL
     case invalidResponse
-    case httpError(statusCode: Int, data: Data?)
-    case connectionError
+    case httpError(statusCode: Int, data: Data)
+    case noInternetConnection
+    case connectionError(Error)
     case decodingError(Error)
     case unauthorized
-    case timeout
     case serverError
     case unknown(Error)
 }
@@ -220,11 +220,8 @@ let baseURL = URL(string: "https://api.example.com")!
 let networkService = NetworkService(
     baseURL: baseURL,
     plugins: [
-        AuthPlugin(tokenProvider: tokenProvider),
-        LoggingPlugin(),
-        RetryPlugin(maxRetries: 3),
-        CachePlugin(),
-        TimeoutPlugin(timeout: 30),
+        AuthPlugin(tokenProvider: { return "Bearer token" }),
+        RetryPlugin(),
         ConnectivityPlugin()
     ]
 )
@@ -233,36 +230,36 @@ let networkService = NetworkService(
 2. API 요청 정의:
 
 ```swift
-enum UserAPIRequest {
-    case getUser(id: String)
-}
-
-extension UserAPIRequest: APIRequest {
+struct UserRequest: APIRequest {
     typealias Response = UserDTO
     
-    var path: String {
-        switch self {
-        case .getUser(let id):
-            return "/users/\(id)"
-        }
-    }
+    let userId: String
     
-    var method: HTTPMethod {
-        return .get
-    }
+    var path: String { return "/users/\(userId)" }
+    var method: HTTPMethod { return .get }
 }
 ```
 
 3. 요청 실행:
 
 ```swift
+// NetworkService 직접 사용
 do {
-    let userDTO = try await networkService.request(UserAPIRequest.getUser(id: "123"))
+    let userDTO = try await networkService.request(UserRequest(userId: "123"))
     // userDTO 처리
 } catch let error as NetworkError {
     // 네트워크 에러 처리
 } catch {
     // 기타 에러 처리
+}
+
+// 또는 APIClient 사용
+let apiClient = NetworkAPIClient(networkService: networkService)
+do {
+    let userDTO = try await apiClient.send(UserRequest(userId: "123"))
+    // userDTO 처리
+} catch {
+    // 에러 처리
 }
 ```
 
@@ -275,5 +272,6 @@ NetworkModule은 다음 설계 원칙에 따라 구현되었습니다:
 3. **테스트 용이성**: 모의 구현(MockNetworkService)을 통한 테스트 지원
 4. **에러 처리**: 체계적인 에러 타입과 처리 메커니즘 제공
 5. **비동기 처리**: Swift의 최신 async/await 패턴 활용
+6. **선언적 API**: APIRequest 프로토콜을 통한 선언적 API 설계
 
 이러한 원칙을 통해 안정적이고 유지보수 가능한 네트워크 계층을 구현할 수 있습니다.

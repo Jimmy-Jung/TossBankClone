@@ -15,17 +15,14 @@ public final class TransferDIContainer: TransferDIContainerProtocol {
     // MARK: - 속성
     private let environment: AppEnvironment
     private let networkService: NetworkServiceProtocol
-    private let baseURL: URL
     
     // MARK: - 초기화
     public init(
         environment: AppEnvironment,
-        networkService: NetworkServiceProtocol,
-        baseURL: URL
+        networkService: NetworkServiceProtocol
     ) {
         self.environment = environment
         self.networkService = networkService
-        self.baseURL = baseURL
         
         if environment == .test {
             setupMockData()
@@ -33,7 +30,7 @@ public final class TransferDIContainer: TransferDIContainerProtocol {
     }
 
     private func createAPIClient() -> APIClient {
-        return NetworkAPIClient(networkService: networkService, baseURL: baseURL)
+        return NetworkAPIClient(networkService: networkService)
     }
     
     // 뷰모델 생성 메서드

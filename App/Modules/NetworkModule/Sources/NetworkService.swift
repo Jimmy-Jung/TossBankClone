@@ -1,28 +1,20 @@
 import Foundation
 import Combine
 
-/// URLSession 프로토콜 - 테스트 용이성을 위한 추상화
-public protocol URLSessionProtocol {
-    func data(for request: URLRequest) async throws -> (Data, URLResponse)
-    func upload(for request: URLRequest, from bodyData: Data) async throws -> (Data, URLResponse)
-}
-
-/// URLSession을 URLSessionProtocol로 확장
-extension URLSession: URLSessionProtocol { }
-
 /// 네트워크 서비스 인터페이스
 public protocol NetworkServiceProtocol {
-    /// URLRequest를 사용한 요청
-    func request<T: Decodable>(_ request: URLRequest, responseType: T.Type) async throws -> T
+    /// APIRequest를 사용한 요청
+    func request<R: APIRequest>(_ apiRequest: R) async throws -> R.Response
     
-    /// 파일 업로드 요청
-    func upload<T: Decodable>(_ request: URLRequest, data: Data, mimeType: String, responseType: T.Type) async throws -> T
+    /// APIRequest를 사용한 파일 업로드 요청
+    func upload<R: APIRequest>(_ apiRequest: R, data: Data, mimeType: String) async throws -> R.Response
 }
 
 /// 네트워크 서비스 구현체
 public final class NetworkService: NetworkServiceProtocol {
     // MARK: - 속성
-    private let session: URLSessionProtocol
+    private let baseURL: URL
+    private let session: URLSession
     private let decoder: JSONDecoder
     private let encoder: JSONEncoder
     private let plugins: [NetworkPlugin]
@@ -31,7 +23,8 @@ public final class NetworkService: NetworkServiceProtocol {
     // MARK: - 초기화
     /// 네트워크 서비스 초기화
     /// - Parameters:
-    ///   - session: URLSessionProtocol (기본값: URLSession.shared)
+    ///   - baseURL: API 기본 URL
+    ///   - session: URLSession (기본값: URLSession.shared)
     ///   - decoder: JSONDecoder (기본값: JSONDecoder())
     ///   - encoder: JSONEncoder (기본값: JSONEncoder())
     ///   - plugins: 플러그인 배열 (기본값: [])
@@ -39,12 +32,14 @@ public final class NetworkService: NetworkServiceProtocol {
     ///   - ConnectivityPlugin: 네트워크 연결 상태 플러그인 (기본값: ConnectivityPlugin(reachability: reachability))
     ///   - RetryPlugin: 네트워크 요청 재시도 플러그인 (기본값: RetryPlugin())
     public init(
-        session: URLSessionProtocol = URLSession.shared,
+        baseURL: URL,
+        session: URLSession = URLSession.shared,
         decoder: JSONDecoder = JSONDecoder(),
         encoder: JSONEncoder = JSONEncoder(),
         plugins: [NetworkPlugin] = [],
         reachability: NetworkReachability = NetworkReachabilityImpl.shared
     ) {
+        self.baseURL = baseURL
         self.session = session
         self.decoder = decoder
         self.encoder = encoder
@@ -74,8 +69,9 @@ public final class NetworkService: NetworkServiceProtocol {
     
     /// 인증 토큰 제공자를 사용하는 초기화 메서드
     public convenience init(
+        baseURL: URL,
         authTokenProvider: @escaping () -> String?,
-        session: URLSessionProtocol = URLSession.shared,
+        session: URLSession = URLSession.shared,
         decoder: JSONDecoder = JSONDecoder(),
         encoder: JSONEncoder = JSONEncoder(),
         plugins: [NetworkPlugin] = [],
@@ -91,6 +87,7 @@ public final class NetworkService: NetworkServiceProtocol {
         }
         
         self.init(
+            baseURL: baseURL,
             session: session,
             decoder: decoder,
             encoder: encoder,
@@ -99,13 +96,28 @@ public final class NetworkService: NetworkServiceProtocol {
         )
     }
     
-    // MARK: - 요청 메서드
-    public func request<T: Decodable>(_ request: URLRequest, responseType: T.Type) async throws -> T {
+    // MARK: - APIRequest 기반 메서드
+    /// APIRequest를 사용한 요청
+    public func request<R: APIRequest>(_ apiRequest: R) async throws -> R.Response {
+        let urlRequest = try apiRequest.asURLRequest(baseURL: baseURL)
+        return try await request(urlRequest, responseType: R.Response.self)
+    }
+    
+    /// APIRequest를 사용한 파일 업로드 요청
+    public func upload<R: APIRequest>(_ apiRequest: R, data: Data, mimeType: String) async throws -> R.Response {
+        var urlRequest = try apiRequest.asURLRequest(baseURL: baseURL)
+        return try await upload(urlRequest, data: data, mimeType: mimeType, responseType: R.Response.self)
+    }
+    
+    // MARK: - URLRequest 기반 메서드 (내부 구현)
+    /// URLRequest를 사용한 요청
+    internal func request<T: Decodable>(_ request: URLRequest, responseType: T.Type) async throws -> T {
         // 네트워크 요청 실행 및 응답 처리
         return try await performRequest(request)
     }
     
-    public func upload<T: Decodable>(_ request: URLRequest, data: Data, mimeType: String, responseType: T.Type) async throws -> T {
+    /// 파일 업로드 요청
+    internal func upload<T: Decodable>(_ request: URLRequest, data: Data, mimeType: String, responseType: T.Type) async throws -> T {
         // URLRequest 복사
         var urlRequest = request
         

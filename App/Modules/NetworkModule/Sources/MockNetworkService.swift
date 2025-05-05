@@ -10,9 +10,12 @@ public final class MockNetworkService: NetworkServiceProtocol {
     private var requestHandlers: [String: RequestHandler] = [:]
     private var capturedRequests: [URLRequest] = []
     private var defaultHandler: RequestHandler?
+    private let baseURL: URL
     
     // MARK: - 초기화
-    public init() {}
+    public init(baseURL: URL = URL(string: "https://example.com")!) {
+        self.baseURL = baseURL
+    }
     
     // MARK: - 테스트 설정 메서드
     /// 특정 경로에 대한 응답 핸들러 설정
@@ -76,7 +79,26 @@ public final class MockNetworkService: NetworkServiceProtocol {
     }
     
     // MARK: - NetworkServiceProtocol 구현
-    public func request<T: Decodable>(_ request: URLRequest, responseType: T.Type) async throws -> T {
+    public func request<R: APIRequest>(_ apiRequest: R) async throws -> R.Response {
+        // APIRequest를 URLRequest로 변환
+        let urlRequest = try apiRequest.asURLRequest(baseURL: baseURL)
+        return try await processRequest(urlRequest)
+    }
+    
+    public func upload<R: APIRequest>(_ apiRequest: R, data: Data, mimeType: String) async throws -> R.Response {
+        // APIRequest를 URLRequest로 변환
+        var urlRequest = try apiRequest.asURLRequest(baseURL: baseURL)
+        
+        // 업로드 설정
+        urlRequest.httpMethod = "POST"
+        urlRequest.setValue(mimeType, forHTTPHeaderField: "Content-Type")
+        urlRequest.httpBody = data
+        
+        return try await processRequest(urlRequest)
+    }
+    
+    // MARK: - 내부 메서드
+    private func processRequest<T: Decodable>(_ request: URLRequest) async throws -> T {
         capturedRequests.append(request)
         
         // 요청 경로 추출
@@ -105,40 +127,6 @@ public final class MockNetworkService: NetworkServiceProtocol {
         
         do {
             return try JSONDecoder().decode(T.self, from: data)
-        } catch {
-            throw NetworkError.decodingError(error)
-        }
-    }
-    
-    public func upload<T: Decodable>(_ request: URLRequest, data: Data, mimeType: String, responseType: T.Type) async throws -> T {
-        capturedRequests.append(request)
-        
-        // 요청 경로 추출
-        let path = request.url?.path ?? ""
-        
-        // 해당 경로에 대한 핸들러 또는 기본 핸들러 실행
-        let handler = requestHandlers[path] ?? defaultHandler
-        
-        guard let handler = handler else {
-            throw NetworkError.invalidResponse
-        }
-        
-        let (responseData, response, error) = handler(request)
-        
-        if let error = error {
-            throw error
-        }
-        
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw NetworkError.invalidResponse
-        }
-        
-        guard (200...299).contains(httpResponse.statusCode), let responseData = responseData else {
-            throw NetworkError.httpError(statusCode: httpResponse.statusCode, data: responseData ?? Data())
-        }
-        
-        do {
-            return try JSONDecoder().decode(T.self, from: responseData)
         } catch {
             throw NetworkError.decodingError(error)
         }

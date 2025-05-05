@@ -13,19 +13,16 @@ public protocol APIClient {
 public final class NetworkAPIClient: APIClient {
     // MARK: - 속성
     private let networkService: NetworkServiceProtocol
-    private let baseURL: URL
     
     // MARK: - 생성자
-    public init(networkService: NetworkServiceProtocol, baseURL: URL) {
+    public init(networkService: NetworkServiceProtocol) {
         self.networkService = networkService
-        self.baseURL = baseURL
     }
     
     // MARK: - APIClient 프로토콜 구현
     public func send<T: APIRequest>(_ request: T) async throws -> T.Response {
         do {
-            let urlRequest = try request.asURLRequest(baseURL: baseURL)
-            return try await networkService.request(urlRequest, responseType: T.Response.self)
+            return try await networkService.request(request)
         } catch {
             throw error
         }

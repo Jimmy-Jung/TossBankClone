@@ -18,19 +18,16 @@ public final class AuthDIContainer: AuthDIContainerProtocol {
     private let environment: AppEnvironment
     private(set) public var authenticationManager: AuthenticationManagerProtocol
     private let networkService: NetworkServiceProtocol
-    private let baseURL: URL
     
     // MARK: - 초기화
     public init(
         environment: AppEnvironment,
         authenticationManager: AuthenticationManagerProtocol,
-        networkService: NetworkServiceProtocol,
-        baseURL: URL
+        networkService: NetworkServiceProtocol
     ) {
         self.environment = environment
         self.authenticationManager = authenticationManager
         self.networkService = networkService
-        self.baseURL = baseURL
         
         if environment == .test {
             setupMockData()
@@ -39,7 +36,7 @@ public final class AuthDIContainer: AuthDIContainerProtocol {
 
     // MARK: - 내부 의존성 생성 메서드
     private func createAPIClient() -> APIClient {
-        return NetworkAPIClient(networkService: networkService, baseURL: baseURL)
+        return NetworkAPIClient(networkService: networkService)
     }
     
     private func createAuthRepository() -> AuthRepositoryProtocol {

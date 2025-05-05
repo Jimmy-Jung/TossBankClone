@@ -17,17 +17,14 @@ public final class AccountDIContainer: AccountDIContainerProtocol {
     // MARK: - 속성
     private let environment: AppEnvironment
     private let networkService: NetworkServiceProtocol
-    private let baseURL: URL
     
     // MARK: - 초기화
     public init(
         environment: AppEnvironment,
-        networkService: NetworkServiceProtocol,
-        baseURL: URL
+        networkService: NetworkServiceProtocol
     ) {
         self.environment = environment
         self.networkService = networkService
-        self.baseURL = baseURL
         
         if environment == .test {
             setupMockData()
@@ -35,7 +32,7 @@ public final class AccountDIContainer: AccountDIContainerProtocol {
     }
 
     private func createAPIClient() -> APIClient {
-        return NetworkAPIClient(networkService: networkService, baseURL: baseURL)
+        return NetworkAPIClient(networkService: networkService)
     }
     
     private func createAccountRepository() -> AccountRepositoryProtocol {

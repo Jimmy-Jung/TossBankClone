@@ -36,7 +36,7 @@ final class AppDIContainer: AppDIContainerProtocol {
         switch environment {
         case .production:
             // 프로덕션 환경에서는 실제 서비스 사용
-            self.networkService = NetworkService()
+            self.networkService = NetworkService(baseURL: baseURL)
             self.authenticationManager = AuthenticationManager.shared
             
         case .test:
@@ -53,24 +53,21 @@ final class AppDIContainer: AppDIContainerProtocol {
         return AuthDIContainer(
             environment: environment,
             authenticationManager: authenticationManager,
-            networkService: networkService,
-            baseURL: baseURL
+            networkService: networkService
         )
     }
     
     func accountDIContainer() -> AccountDIContainerProtocol {
         return AccountDIContainer(
             environment: environment,
-            networkService: networkService,
-            baseURL: baseURL
+            networkService: networkService
         )
     }
     
     func transferDIContainer() -> TransferDIContainerProtocol {
         return TransferDIContainer(
             environment: environment,
-            networkService: networkService,
-            baseURL: baseURL
+            networkService: networkService
         )
     }
     
