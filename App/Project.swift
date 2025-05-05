@@ -112,7 +112,7 @@ let project = Project(
             product: .framework,
             bundleId: "io.tuist.TossBankClone.domain",
             infoPlist: .default,
-            sources: ["Modules/DomainModule/Sources/**"],
+            sources: ["Modules/Cores/DomainModule/Sources/**"],
             dependencies: [
                 .target(name: "AuthenticationModule")
             ]
@@ -123,7 +123,7 @@ let project = Project(
             product: .framework,
             bundleId: "io.tuist.TossBankClone.data",
             infoPlist: .default,
-            sources: ["Modules/DataModule/Sources/**"],
+            sources: ["Modules/Cores/DataModule/Sources/**"],
             dependencies: [
                 .target(name: "DomainModule")
             ]
@@ -134,7 +134,7 @@ let project = Project(
             product: .framework,
             bundleId: "io.tuist.TossBankClone.authentication",
             infoPlist: .default,
-            sources: ["Modules/AuthenticationModule/Sources/**"],
+            sources: ["Modules/Cores/AuthenticationModule/Sources/**"],
             dependencies: [
             ]
         ),
@@ -144,7 +144,7 @@ let project = Project(
             product: .framework,
             bundleId: "io.tuist.TossBankClone.network",
             infoPlist: .default,
-            sources: ["Modules/NetworkModule/Sources/**"],
+            sources: ["Modules/Cores/NetworkModule/Sources/**"],
             dependencies: []
         ),
         .target(
@@ -153,7 +153,7 @@ let project = Project(
             product: .unitTests,
             bundleId: "io.tuist.TossBankClone.network.tests",
             infoPlist: .default,
-            sources: ["Modules/NetworkModule/Tests/**"],
+            sources: ["Modules/Cores/NetworkModule/Tests/**"],
             dependencies: [
                 .target(name: "NetworkModule")
             ]
@@ -164,7 +164,7 @@ let project = Project(
             product: .framework,
             bundleId: "io.tuist.TossBankClone.shared",
             infoPlist: .default,
-            sources: ["Modules/SharedModule/Sources/**"],
+            sources: ["Modules/Cores/SharedModule/Sources/**"],
             dependencies: [
                 .target(name: "DomainModule"),
                 
@@ -176,8 +176,8 @@ let project = Project(
             product: .framework,
             bundleId: "io.tuist.TossBankClone.designsystem",
             infoPlist: .default,
-            sources: ["Modules/DesignSystem/Sources/**"],
-            resources: ["Modules/DesignSystem/Resources/**"]
+            sources: ["Modules/Cores/DesignSystem/Sources/**"],
+            resources: ["Modules/Cores/DesignSystem/Resources/**"]
         ),
         .target(
             name: "TossBankCloneTests",
