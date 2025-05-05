@@ -1,5 +1,9 @@
 # TossBankClone
 
+
+https://github.com/user-attachments/assets/27945138-a794-4d27-ba9a-23b6dc04f4ef
+
+
 토스뱅크 애플리케이션을 모방한 iOS 앱 프로젝트입니다. Clean Architecture와 모듈식 구조를 통해 확장성과 유지보수성이 높은 코드베이스를 제공합니다.
 
 ## 목차
