@@ -37,6 +37,7 @@ graph TD
         RepositoryImplementations["Repository Implementations"]
         DataSources["Data Sources"]
         Network["Network Services"]
+        APIClients["API Clients"]
     end
     
     Views --> ViewModels
@@ -44,13 +45,14 @@ graph TD
     UseCases --> RepositoryInterfaces
     RepositoryImplementations --> RepositoryInterfaces
     RepositoryImplementations --> DataSources
-    RepositoryImplementations --> Network
+    RepositoryImplementations --> APIClients
+    APIClients --> Network
 ```
 
 ### 계층 구조
 - **Presentation Layer**: 사용자 인터페이스와 상호작용 담당
-- **Domain Layer**: 비즈니스 로직과 규칙 정의
-- **Data Layer**: 데이터 액세스 및 저장 담당
+- **Domain Layer**: 비즈니스 로직과 규칙 정의, 외부 의존성 없음
+- **Data Layer**: 데이터 액세스 및 저장 담당, 도메인 계층의 인터페이스 구현
 
 ## 모듈 구성
 
@@ -60,7 +62,7 @@ graph TD
 
 - **DomainModule**: 비즈니스 엔티티, 리포지토리 인터페이스, 유스케이스 정의
 - **DataModule**: 리포지토리 구현체, DTO, API 요청 정의
-- **NetworkModule**: 네트워크 통신, 에러 처리, 플러그인 시스템
+- **NetworkModule**: 네트워크 통신, 에러 처리, 플러그인 시스템 제공
 - **AuthenticationModule**: 인증 관련 기능 관리
 - **SharedModule**: 코디네이터, 의존성 주입, 비동기 뷰모델 패턴, 알림 관리 등 공유 기능
 - **DesignSystem**: UI 컴포넌트, 색상 시스템, 타이포그래피 등 디자인 요소
@@ -88,6 +90,7 @@ App
       ├── Account
       │    ├── DomainModule
       │    ├── DataModule
+      │    ├── NetworkModule
       │    ├── SharedModule
       │    └── DesignSystem
       ├── Auth
@@ -98,6 +101,7 @@ App
       ├── Transfer
       │    ├── DomainModule
       │    ├── DataModule
+      │    ├── NetworkModule
       │    ├── SharedModule
       │    └── DesignSystem
       └── Settings
@@ -134,10 +138,11 @@ App
 - **UI 프레임워크**: SwiftUI, UIKit(일부 화면)
 - **아키텍처**: Clean Architecture + MVVM
 - **네비게이션**: Coordinator 패턴
-- **로컬 데이터베이스**: SwiftData
-- **의존성 관리**: Tuist
 - **비동기 프로그래밍**: Swift Concurrency(async/await)
 - **반응형 프로그래밍**: Combine
+- **네트워크**: 모듈화된 플러그인 기반 네트워크 계층
+- **로컬 데이터베이스**: SwiftData
+- **의존성 관리**: Tuist
 - **보안**: KeyChain, LocalAuthentication
 
 ## 개발 환경 설정
@@ -190,9 +195,10 @@ App/
 │   │       └── Repositories/    # 리포지토리 구현
 │   ├── NetworkModule/           # 네트워크 레이어
 │   │   └── Sources/
-│   │       ├── Core/            # 핵심 네트워크 로직
-│   │       ├── Plugins/         # 네트워크 플러그인
-│   │       └── Errors/          # 에러 정의
+│   │       ├── Core/            # 핵심 네트워크 로직 (APIClient, APIRequest)
+│   │       ├── Plugins/         # 네트워크 플러그인 (Auth, Retry, Connectivity 등)
+│   │       ├── Errors/          # 에러 정의
+│   │       └── Utils/           # 유틸리티 함수
 │   ├── AuthenticationModule/    # 인증 모듈
 │   │   └── Sources/
 │   │       └── Manager/         # 인증 관리자
@@ -209,10 +215,29 @@ App/
 │   │       └── Components/      # UI 컴포넌트
 │   └── Features/                # 기능 모듈
 │       ├── Account/             # 계좌 기능
+│       │   └── Sources/
+│       │       ├── Coordinators/  # 화면 조정
+│       │       ├── DIContainer/   # 의존성 주입
+│       │       └── Presentation/  # 화면 및 뷰모델
 │       ├── Auth/                # 인증 기능
+│       │   └── Sources/
+│       │       ├── Coordinators/
+│       │       ├── DIContainer/
+│       │       └── Presentation/
 │       ├── Transfer/            # 송금 기능
+│       │   └── Sources/
+│       │       ├── Coordinators/
+│       │       ├── DIContainer/
+│       │       └── Presentation/
 │       └── Settings/            # 설정 기능
+│           └── Sources/
+│               ├── Coordinators/
+│               ├── DIContainer/
+│               └── Presentation/
 └── Tests/                       # 테스트 디렉토리
+    ├── UnitTests/
+    ├── IntegrationTests/
+    └── UITests/
 ```
 
 각 모듈에는 자체 README.md 파일이 있어 해당 모듈의 상세 정보, 아키텍처, 사용 방법 등을 확인할 수 있습니다.
